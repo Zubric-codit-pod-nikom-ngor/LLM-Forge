@@ -1,0 +1,24 @@
+.SearchTile {
+    background-color: #242424;
+    border: #2e2e2e solid 1px;
+    border-radius: 10px;
+    box-shadow: 0 5px 20px black;
+    transition: all 0.25s ease-in-out;
+}
+.SearchTile:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 80px black;
+    border-color: #606060;
+}
+
+.HashtagCard {
+    --random-color: hsl(10, 100%, 20%);
+    --random-color-1: hsl(10, 100%, 20%);
+    border-radius: 50vmin;
+    border-color: var(--random-color-1);
+    border-width: 3.5px;
+    border-style: solid;
+    background-color: var(--random-color);
+    padding-left: 3px;
+    padding-right: 3px;
+}

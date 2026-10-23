@@ -1,0 +1,10 @@
+{
+  "token_path": ".\\test_token",
+
+  "UI": {
+    "IS_SUPPORTING_VIEWPORT_RESIZE": false
+  },
+
+  "EXTENSIONS": {},
+  "LAYOUT": null
+}

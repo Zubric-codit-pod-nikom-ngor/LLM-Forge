@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>LLM Forge</title>
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline';" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="static/stylesheet.css">
+    <link rel="stylesheet" href="static/renderStylesheet.css">
+    <link rel="stylesheet" href="static/classTags.css">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=BBH+Bartle&family=Google+Sans+Code:ital,wght,MONO@0,300..800,1;1,300..800,1&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Sen:wght@400..800&display=swap" rel="stylesheet">
+</head>
+<body style="overflow: hidden">
+
+    <div id="extra-load-particles" class="Center" style="z-index: 997"></div>
+    <div id="extra-load" class="Center DarkDiv" style="transition: all 0.5s; width: 400px; height: 300px; z-index: 998; box-shadow: #ff3c00 0 0 50px;">
+        <div class="ExtraLoader Center" style="transform: translate(-50%, -35px)"></div>
+        <div class="Center PosVertically" style="width: fit-content; height: fit-content; margin-top: 50px">
+            <span class="GoogleCodeFont NoSelect" style="white-space: nowrap; width: 100%; font-size: 16px; color: white; text-align: center">Building The Forge...</span>
+            <span class="GoogleCodeFont NoSelect" style="white-space: nowrap; width: 100%; margin-top: 10px; font-size: 12px; color: #474747; text-align: center">Might Take a Second</span>
+        </div>
+    </div>
+
+    <div style="width: fit-content; height: 1px; position: sticky; top: 7px; left: 7px; z-index: 100; border-image: linear-gradient(to bottom, #ff4400, #ff9900) 1; border-style: solid; border-width: 0; border-left-width: 4px; padding-left: 5.5px; border-radius: 10px; transition: all 0.3s" id="notification-container" class="PosVertically"></div>
+
+    <div class="Center"
+         style="box-shadow: black 0 0 100px; width: calc(100% - 50px); height: calc(100% - 50px); background: #2e2e2e; border-radius: 12px; overflow: hidden; z-index: 2">
+        <div class="BorderHoverGlow Center" style="z-index: 2"></div>
+        <div class="DarkDiv Center" id="viewport-resize-container"
+             style="overflow: hidden; width: calc(100% - 8px); height: calc(100% - 8px); z-index: 3; border: transparent; background: linear-gradient(-135deg, #1F1F1F, #080808)">
+
+            <div class="not-Dockable NonResizeableViaViewport" style="background: red; width: 20px; height: 20px; position: absolute; top: -22px; left: -22px"></div>
+            <div class="not-Dockable NonResizeableViaViewport" style="background: red; width: 20px; height: 20px; position: absolute; top: -22px; left: calc(100% + 2px)"></div>
+            <div class="not-Dockable NonResizeableViaViewport" style="background: red; width: 20px; height: 20px; position: absolute; top: calc(100% + 2px); left: -22px"></div>
+            <div class="not-Dockable NonResizeableViaViewport" style="background: red; width: 20px; height: 20px; position: absolute; top: calc(100% + 2px); left: calc(100% + 2px)"></div>
+
+            <div id="util-container" style="z-index: 200; transition: all 0.5s ease-in-out; cursor: pointer; position: absolute; top: -10px; left: calc(100% - 55px); width: 65px; height: 210px; border-radius: 10px; background: #292929; border: #3e3e3e solid 3px" class="NonResizeableViaViewport">
+                <div style="padding-top: 8px; cursor: pointer; width: calc(100% - 10px); height: calc(100% - 10px); position: relative;" class="Center PosVertically">
+                    <div style="padding-bottom: 5px; padding-top: 5px; width: 42px; height: fit-content; border-bottom: #737373 solid 1px" class="PosCentrally DividerBorder" onclick="switch_editing(); console.log('util-edit')">
+                        <img style="width: 40px; height: 40px" class="NoSelect InvertSizeUpHover" id="util-edit" draggable="false"
+                        src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAACXBIWXMAAAsTAAALEwEAmpwYAAABlUlEQVR4nO2ZMUpDQRBAH2qn0S4oWpnSyiMItmIRa0FhLYKktzPYeYB0KWwsBNETCB/L9IIoBLG0EgVBMZGFCYxLNMRCZnUeLPzs32JeMjuBGXCcnzIDTJIx68AV0APegQJYJiPmgDrQFYkX4E2en4AlMqAm335PRPaACaAEnMr+ORlIdCXYuK6BKfV+XvYfyUCiCzSAOwn6UsksWBfREvE5spjITAPH8vkM4+lUS95pmQfLlz29EwcDzmiZuFYxnE4tVV4Hyeyr/5JZDBGUxK7sVYFXCfhwyFkTfBdYNZHZsSoxqDqlbKg06w05a1aiT8uqxCh5Hqymk0tYwSWs4BJWcAkrBJcwQnAJIwSXMEJwCSMElzBC+AsSmyM0CkZpKvwqY0BHuhj3QDlHiciK6inpFTvi2UhEjiTwJtBOZLKRKAHPEmBF7fdFyjlIRLYk4Dg91bTVnTEvgQjEgLf5PJ9oWu7FplTU0KUQmSIZxHSkNJum8UW1ijPuE2ANGCcDbpP0KeTOxAKQFRfAjfwyumI5zn/lA0nvFKrZKQuTAAAAAElFTkSuQmCC">
+                    </div>
+                    <div style="padding-bottom: 5px; padding-top: 5px; width: 42px; height: fit-content; border-bottom: #737373 solid 1px" class="PosCentrally DividerBorder" onclick="switch_docking(); console.log('util-dock')">
+                        <img style="width: 40px; height: 40px" class="NoSelect InvertSizeUpHover" id="util-dock" draggable="false"
+                        src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAxElEQVR4nO2ZMQ7CMAxF39QeolekHJPCVK6C2t0sRkJIoMhuIRH/SRkt/5fIiwNCCFE7PXAEzsAK2Mt5xgrPp5rVe43eO8UAXBNhsjWzZwjRF4TfW8BcIvQSxx3CRGsOEYFLRQJTRGCpSGCJCOwVZouaIiSABEgJCJGk+RkwCSABkwASQAJIgDYFhEjS/AyYBJCAZQRqWmzd/nK1OLa+3O19tf1rgRnoCDIUSFT7wfGg8yec3gz21gILcPKe4ZsXQgi+wh090GE4ZOx2NgAAAABJRU5ErkJggg==">
+                    </div>
+                    <div style="padding-bottom: 5px; padding-top: 5px; width: 42px; height: fit-content; border-bottom: #737373 solid 1px" class="PosCentrally DividerBorder" onclick="switch_viewport_resize(); console.log('util-resize')">
+                        <img style="width: 35px; height: 35px" class="NoSelect InvertSizeUpHover" id="util-resize" draggable="false"
+                        src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAACXBIWXMAAAsTAAALEwEAmpwYAAAA6UlEQVR4nO3ZTQrCMBDF8XeJAW9SwTN4eRfeQ+tCV0qhQij9SCYtfa/MH2bR5Y+mJDRAFEXRBl0BfAB8K4cC8j4CxJMBuKlDLEGkGFnEHcBJEWIjCKhBbAIhBbEZhAxkCSEByUHQQ3IR1JASBC2kFEEJ8SDoIF4EFaQGQQMZHgC759LafqQRXU0/ksuJokCwRIM4A7js/GGv0gPASx3h3XhollMNhBJRCqFFlECoEbkQekQORAKxBJFBzEGkEFMQOcQYRBIxhMgiUog0IoVQHQA9pddckm/iX+1lZbvnT4I1IU8WSBRFB+sHQ9HkulchtI0AAAAASUVORK5CYII=">
+                    </div>
+                    <div style="padding-top: 8px; width: 42px; height: 42px" class="PosCentrally" onclick="let cont = document.getElementById('util-container'); if (document.getElementById('util-arrow').classList.contains('active')) {cont.style.top = (42-cont.getBoundingClientRect().height).toString()+'px'} else {cont.style.top = '-10px'}; document.getElementById('util-arrow').classList.toggle('active');">
+                        <span class="Arrow active NoSelect" id="util-arrow" draggable="false"><span></span><span></span></span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="extension-container" style="z-index: 200; transition: all 0.5s ease-in-out; position: absolute; top: calc(100% + 10px); left: calc(100% - 213px); transform: translateY(-100%); width: 223px; height: 210px; border-radius: 10px; background: #292929; border: #3e3e3e solid 3px" class="NonResizeableViaViewport">
+                <div style="padding-bottom: 8px; width: calc(100% - 10px); height: calc(100% - 10px); position: relative;" class="Center PosVertically">
+                    <div style="cursor: pointer; padding-bottom: 8px; margin-right: 8px; width: calc(100% - 5.75px); height: 42px" class="DividerBorder PosCentrally" onclick="let cont = document.getElementById('extension-container'); if (!document.getElementById('extension-arrow').classList.contains('active')) {cont.style.top = 'calc(100% + '+(cont.getBoundingClientRect().height - 42)+'px)'; cont.style.width = '65px'; cont.style.left = 'calc(100% - 55px)'} else {cont.style.top = 'calc(100% + 10px)'; cont.style.width = '223px'; cont.style.left = 'calc(100% - 213px)'}; document.getElementById('extension-arrow').classList.toggle('active');">
+                        <span class="Arrow NoSelect" id="extension-arrow" draggable="false"><span></span><span></span></span>
+                    </div>
+                    <div class="DarkDiv PosVertically CustomScrollbar" style="margin-top: 8px; height: 158px; width: 200px">
+                        <div class="DividerBorder PosCentrally" style="margin-bottom: 15px; width: 100%">
+                            <span style="font-size: 16px; margin: 5px; padding: 0; color: #ff9100" class="SenFont NoSelect">Extensions</span>
+                        </div>
+                        <div style="width: 100%; height: 100%" id="extension-choosing"></div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div id="loading-big-circle" class="circleOverlay" style="transition: all 0.5s ease-out; overflow: hidden;">
+        <div id="loader" class="LoaderOverlay Center" style="margin: auto; display: flex; justify-content: center; z-index: 1001; height: fit-content">
+            <div class="Bar" style="margin-left: 30px; animation-delay: 0.25s"></div>
+            <div class="Bar" style="margin-left: 30px; animation-delay: 0.5s"></div>
+            <div class="Bar" style="margin-left: 30px; animation-delay: 0.75s"></div>
+            <div class="Bar" style="margin-left: 30px; animation-delay: 1s"></div>
+            <div class="Bar" style="margin-left: 30px; animation-delay: 1.25s"></div>
+        </div>
+    </div>
+
+    <div id="blur-layer" class="Center" style="will-change: backdrop-filter; transition: all 0.5s; pointer-events: none; width: 100%; height: 100%; z-index: 996; backdrop-filter: blur(120px); background-color: rgba(255, 255, 255, 0.01)"></div>
+    <div id="context-menu" class="CustomScrollbar ListedArrows" style="opacity: 0; overflow: hidden; padding: 10px; max-height: 50%; max-width: 75%; box-shadow: #1F1F1F 0 0 30px; transition: height 0.25s ease-in-out, width 0.25s ease-in-out, opacity 0.25s ease-in-out; border-style: solid; border-radius: 10px; border-width: 2px; border-color: #ff4400; position: absolute; background-color: rgba(80, 80, 80, 0.25); backdrop-filter: blur(12px); width: fit-content; height: 0; z-index: 994"></div>
+
+    <script src="./static/design-related.js"></script>
+    <script src="./static/extension-related.js"></script>
+
+    <script type="module">
+        console.log(window.pythonPipelineAPI)
+        window.pythonPipelineAPI.connectToPythonPipeline()
+    </script>
+
+    <script>addEventListener("DOMContentLoaded", () => {
+        start_extra_load(); document.getElementById("extension-arrow").click();
+        document.getElementById("util-arrow").click();
+    })</script>
+
+</body>
+</html>
