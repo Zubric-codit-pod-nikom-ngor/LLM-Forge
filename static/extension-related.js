@@ -412,6 +412,8 @@ async function main() {
     await end_extra_load()
 }
 
+window.notify = notify
+
 main()
 
 function checkDupedId(item) {
