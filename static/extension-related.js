@@ -385,7 +385,7 @@ async function main() {
             newSnippetContainer.onclick = snippetCallback
 
             let newSnippetText = document.createElement("span")
-            newSnippetText.textContent = "Add " + snippet
+            newSnippetText.textContent = snippet
             newSnippetText.style.fontSize = "14px"
             newSnippetText.style.color = "white"
             newSnippetText.classList.add("GoogleCodeFont", "NoSelect")
