@@ -237,6 +237,14 @@ function sparkParticleStyle(particle) {
     return particle
 }
 
+function yellowSparkParticleStyle(particle) {
+    let object = particle.item
+    object.style.background = "#ff9900"
+    object.style.borderRadius = "50%";
+    particle.item = object
+    return particle
+}
+
 function styleAll(clump, style) {
     let new_clumps = []
     clump.forEach((item) => {
@@ -247,6 +255,26 @@ function styleAll(clump, style) {
     return new_clumps
 }
 
+
+window.ParticleSystem = {
+    sleep: sleep,
+    Particle: Particle,
+    generateKey: generateKey,
+    randomVector: randomVector,
+    basedLog: basedLog,
+    createParticle: createParticle,
+    stepParticle: stepParticle,
+    getParticleAnimationDuration: getParticleAnimationDuration,
+    rawParticleAnimation: rawParticleAnimation,
+    animateParticle: animateParticle,
+    clumpParticles: clumpParticles,
+    animateParticleClump: animateParticleClump,
+    persistentParticles: persistentParticles,
+    timelessPersistentParticles: timelessPersistentParticles,
+    sparkParticleStyle: sparkParticleStyle,
+    styleAll: styleAll,
+    yellowSparkParticleStyle: yellowSparkParticleStyle
+}
 
 
 var global_particle_animations = [false]
@@ -1078,6 +1106,13 @@ if (MAIN_CONTAINER) {
 
 
 
+async function bounceWhenClicked(element) {
+    element.style.scale = "0.8"
+    await sleep(125)
+    element.style.scale = "1"
+    await sleep(125)
+}
+
 function wrap_listed(element) {
     let outside_wrap = document.createElement("a")
     outside_wrap.href = "#";
@@ -1247,3 +1282,5 @@ addEventListener("contextmenu", async (e) => {
 
     addEventListener("mousemove", listener)
 })
+
+window.bounceWhenClicked = bounceWhenClicked

@@ -2,6 +2,8 @@ let LAST_QUICK_CALL_TIME = Date.now()
 const QUICK_CALL_GAP = 150
 let QUICK_CALL_GEN = 0
 
+let StarCounter = 0
+
 let SVGs = {
     "download": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAACXBIWXMAAAsTAAALEwEAmpwYAAABKElEQVR4nO2ZwUrEMBRFT/qVLmbmN9y+wY0LmZUDgv7JfJIr0f2TQIQSWnUWGdK8e+BBoGnJPQ2BJCCEEEIIIcStmYB9qdwOxwHwUllCOGwmILfDYRKABLgEIAEuAUiAERCTACTAJQAJcAlAAoyAWAQBD8AX8ASkKwTkvqfy7pEN8zkL+VJJWBOQSt+fZx9smNMsSC1hSUAd3svs2SwJeK4CvZVD0FpA7nuu+r6OcGCaViQcKwFDhueXqf2+0l5aL4YgLcyEpRrqz18rYejwf0kIEX5NQqjwcwl3pYZb8IZk6vw2t/n4Dp3f5jYfn3W+fW0+PpMAJMAlAAlwCUACjOACLsB9Z3W5pQDvvJoI2HcQ7L+1ayFgKh9+7Lx2nW7WhBBCCCEEPfEN3kFEPgT6QJMAAAAASUVORK5CYII=",
     "like": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAACXBIWXMAAAsTAAALEwEAmpwYAAABnUlEQVR4nO3ZMUvDQBiA4RecRAWHgiBuKg4OLt3durgWHN2dRbA6+g8KDo5dCqW4dFMnxbEgdBAHf4CVllpF0MGTQgpFLuldosl9R164qSTkoWm+NIG8PHHdASpYn8A1sInAlGb1gS08gCjgCZjDA4gCTvAE0gNm8QCigF08gdTwBPKIgGYMIO8IaMcAMkBAFwaQexxvCfgygJzjeIcGiNHaw/EeDBDfwDIOt234bbRxvJoh5PQ/D+LW8CAm12ibcYvAR4x92K5hcFXcCIO8xdzxuP0UEOrXjeeKDtJJCGmnDFFAQwdpJYSoDNarDlIVCOnpIAcCIQ0dpCwM0gfWdJCiMEiJkArCIHUiGgqCdKMgHUGQXhSkJQjSiIJUhUD6YVesJLMkC0iJKZWFQOrTIEUhkO40SMEXSJz/JU6eWnFmybi0EM/AKgaFzZKj4AVNJUPIlSkiapbMB58vZAipY1HYLKkEmOMMIS82ENtZkiZkYAMpOgxp2kBsZ0nShxc2d7vrWHZpuPObiW1Gv5+z4Dz+6yclzTiIvLw8D/sBLsSN+7T0tOMAAAAASUVORK5CYII=",
@@ -383,6 +385,27 @@ window.EXTENSION_SNIPPET_STARTUP_MUTATION_CALLBACKS.push(
                 if (node.getAttribute("itemext") === "core-modelInfo") {
                     let card = document.getElementById("core-modelInfo-cardRender")
                     let target = document.getElementById("core-modelInfo-entry")
+
+                    let star = document.getElementById("core-modelInfo-star").parentElement.children[0]
+                    document.getElementById("core-modelInfo-star").id ="core-modelInfo-star-"+StarCounter
+
+                    card.children[1].onclick = async () => {
+                        star.parentElement.children[0].classList.toggle("active")
+                        if (star.parentElement.children[0].classList.contains("active")) {
+                            let particle_clump = window.ParticleSystem.clumpParticles(
+                                10, star.parentElement.children[1].id, 1.1, 1.03
+                            )
+                            particle_clump = window.ParticleSystem.styleAll(
+                                particle_clump, window.ParticleSystem.yellowSparkParticleStyle
+                            )
+                            let new_key = await window.ParticleSystem.generateKey()
+                            window.ParticleSystem.animateParticleClump(
+                                new_key, particle_clump, true, 10, 1500, "spark"
+                            )
+                        }
+                        window.bounceWhenClicked(star)
+                    }
+
                     target.parentElement.removeChild(card)
 
                     target.addEventListener("dragenter", () => {

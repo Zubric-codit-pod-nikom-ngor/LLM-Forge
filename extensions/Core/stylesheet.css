@@ -22,3 +22,14 @@
     padding-left: 3px;
     padding-right: 3px;
 }
+
+.Star {
+    transition: all 0.25s ease-in-out;
+    fill: #ba3100; cursor: pointer;
+}
+.Star.active {
+    & svg {
+        fill: #ff9900 !important;
+    }
+    fill: #ff9900 !important;
+}
