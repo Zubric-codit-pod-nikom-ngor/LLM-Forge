@@ -16,8 +16,12 @@
                     </svg>
                     <div class="Center" id="core-modelInfo-star"></div>
                 </div>
-                <div class="CustomScrollbar" style="overflow-y: hidden; max-width: calc(100% - 70px);width: fit-content; height: 30px; padding: 4px; padding-left: 8px; padding-right: 8px; position: absolute; top: 15px; left: 60px; background-color: #242424; border: #2e2e2e solid 1px; border-radius: 10px; box-shadow: 0 5px 20px black; transition: all 0.25s ease-in-out;">
+                <div class="CustomScrollbar" style="overflow-y: hidden; max-width: calc(100% - 120px);width: fit-content; height: 30px; padding: 4px; padding-left: 8px; padding-right: 8px; position: absolute; top: 15px; left: 60px; background-color: #242424; border: #2e2e2e solid 1px; border-radius: 10px; box-shadow: 0 5px 20px black; transition: all 0.25s ease-in-out;">
                     <p class="SenFont" style="white-space: nowrap; font-size: 10px; color: white; margin: 0; line-height: 20px">Sigma Here!</p>
+                </div>
+                <div onclick="(async () => {this.parentElement.style.flexGrow = '0'; this.parentElement.style.height = '0'; window.bounceWhenClicked(this); await window.ParticleSystem.sleep(1000); this.parentElement.parentElement.removeChild(this.parentElement)})()"
+                        style="cursor: pointer; width: 40px; height: 40px; position: absolute; top: 10px; left: calc(100% - 50px); background-color: #242424; border: #2e2e2e solid 1px; border-radius: 10px; box-shadow: 0 5px 20px black; transition: all 0.25s ease-in-out;">
+                    <img style="width: 30px; height: 30px; filter: invert(1)" class="Center" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAYAAAA7MK6iAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAv0lEQVR4nO2VXQrCMBAGxwtalZY86NkVLP6hN6hQCaQgJdXdsFHEDOQt+02TbBooFP6JBrgBB2ChqFsCJ+AK1FrpLBT2YXSAE9S5MHeo8xlqLk8BEvlY6sc5RbyKBE3JY9IuZCRRRwLvwGbUC7E561SpRJ5N+m4rpUdhvvJsK5XKs0qZONNYw31E2ueUu280V/Piykjuubl0wFxeGfwyfYaa1uCR2KeIjwbPos9QU4Uv3iq3zM/dhdp5irhQ+E0ekyummbane5EAAAAASUVORK5CYII=">
                 </div>
                 <div class="JetBrainsFont MDRenderDivStyle" style="color: white; white-space: wrap; width: 100%; font-size: 12px"></div>
             </div>
