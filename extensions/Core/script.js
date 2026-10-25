@@ -29,7 +29,7 @@ async function quickSearch() {
     let results = await window.pythonPipelineAPI.interactWithPythonPipeline(
         {
             "object": "search",
-            "args": [query, 10],
+            "args": [query, 20],
             "kwargs": {}
         }
     )
@@ -195,6 +195,7 @@ function setContrastingText(divElement) {
 
 async function dragPull(item, node, starNode) {
     try {
+
         let modelData = Array.from(await window.pythonPipelineAPI.interactWithPythonPipeline(
             {
                 "object": "search",
@@ -375,9 +376,14 @@ async function dragPull(item, node, starNode) {
         group.appendChild(size_container)
 
         node.parentElement.children[0].prepend(group)
+        node.parentElement.children[2].children[0].textContent = modelData.id
+
     } catch (err) {
+
         console.log(err)
         window.notify("Oops! Something went wrong!")
+        node.parentElement.parentElement.removeChild(node.parentElement)
+
     }
 }
 
@@ -393,6 +399,7 @@ window.EXTENSION_SNIPPET_STARTUP_MUTATION_CALLBACKS.push(
 
                     let star = document.getElementById("core-modelInfo-star").parentElement.children[0]
                     document.getElementById("core-modelInfo-star").id ="core-modelInfo-star-"+StarCounter
+                    StarCounter++
 
                     card.children[1].onclick = async () => {
                         star.parentElement.children[0].classList.toggle("active")
@@ -420,6 +427,7 @@ window.EXTENSION_SNIPPET_STARTUP_MUTATION_CALLBACKS.push(
                         window.bounceWhenClicked(star)
                     }
 
+                    card.id = null
                     target.parentElement.removeChild(card)
 
                     target.addEventListener("dragenter", () => {
