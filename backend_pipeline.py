@@ -4,6 +4,7 @@ import datetime
 import json
 import math
 import os
+import pathlib
 import sys
 import time
 import huggingface_hub
@@ -13,6 +14,8 @@ import transformers
 import dataclasses
 from collections.abc import Iterable
 from huggingface_hub import ModelCard
+import tempfile
+import torch
 
 
 
@@ -43,8 +46,9 @@ def update_ui_setting(path, value):
 
 
 with open(".\\test_token", "r") as file:
+    API_KEY = file.read()
     huggingface_hub.login(
-        file.read(),
+        API_KEY,
         skip_if_logged_in=True
     )
 
@@ -195,13 +199,234 @@ def main():
             )
 
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()
 
-# print(parse_jsonified(
-#     {
-#         "object": "get_model_card",
-#         "args": ["HuggingFaceTB/SmolLM2-135M"],
-#         "kwargs": {}
-#     }
-# ))
+
+class MessageFields:
+
+    class Roles:
+        TOOL = "tool"
+        SYSTEM = "system"
+        USER = "user"
+        ASSISTANT = "assistant"
+
+    def generic_user_message(self, contents):
+        return {
+            "role": MessageFields.Roles.USER,
+            "content": contents
+        }
+
+    def generic_context_setting_message(self, context):
+        return {
+            "role": MessageFields.Roles.SYSTEM,
+            "content": context
+        }
+
+    def generic_raw_output_supply(self, output):
+        return {
+            "role": MessageFields.Roles.TOOL,
+            "content": output
+        }
+
+    def generic_assistant_answer_response(self, responce):
+        return {
+            "role": MessageFields.Roles.ASSISTANT,
+            "content": responce
+        }
+
+
+class InferenceChat:
+
+    def __init__(self):
+        self.messages = []
+        self.name: str = None
+        self.client: huggingface_hub.InferenceClient = None
+        self.token_limits = 100
+
+    def back_up(self):
+        # TODO
+        pass
+
+    def file_up(self, message, stream: bool = False):
+        self.messages.append(message)
+        if stream:
+            def wrapper():
+                new_stream = self.client.chat.completions.create(
+                    self.messages, stream=stream, model=self.client.model
+                )
+
+                for chunk in new_stream:
+                    yield chunk
+
+                print(new_stream)
+                print(vars(new_stream))
+
+            return wrapper()
+        else:
+            return self.client.chat.completions.create(
+                self.messages, stream=stream, model=self.client.model
+            )
+
+
+class LoadedModel:
+
+    def __init__(self, tokenizer, model, token_limits=100):
+        self.tokenizer = tokenizer
+        self.model = model
+        self.messages = []
+        self.name = ""
+        self.token_limits = 100
+        self.temperature = 1
+        self.top_p = 0.9
+        self.repetition_prenalty = 1.05
+        self.chat_template = None
+
+    def file_up(self, message, depth=0):
+        self.messages.append(
+            message
+        )
+
+        try:
+            prompt = self.tokenizer.apply_chat_template(
+                self.messages,
+                tokenize=False,
+                add_generation_prompt=True
+            )
+        except ValueError:
+            if not self.tokenizer.chat_template:
+                self.tokenizer.chat_template = """
+{% for message in messages %}
+  {% if message['role'] == 'user' %}
+    {{ '<bos><user>' + message['content'].strip() + '<bot>' }}
+  {% elif message['role'] == 'assistant' %}
+    {{ message['content'].strip() + '<eos>' }}
+  {% endif %}
+{% endfor %}
+""" if not self.chat_template else self.chat_template
+            prompt = self.tokenizer.apply_chat_template(
+                self.messages,
+                tokenize=False,
+                add_generation_prompt=True
+            )
+
+        inputs = self.tokenizer(
+            [prompt], return_tensors="pt"
+        ).to(self.model.device)
+
+        if self.token_limits - inputs["input_ids"].shape[-1] <= 0:
+            print(f"EXCEEDING DEPTH {depth}, DOUBLING TOKEN LIMITS TO {self.token_limits * 2}")
+            self.token_limits *= 2
+            self.messages.pop(-1)
+            self.file_up(message, depth=depth + 1)
+
+        try:
+            with torch.no_grad():
+                ids = self.model.generate(
+                    **inputs,
+                    max_new_tokens = self.token_limits - inputs["input_ids"].shape[-1],
+                    temperature=self.temperature,
+                    top_p=self.top_p, repetition_penalty=self.repetition_prenalty,
+                    pad_token_id=self.tokenizer.eos_token_id,
+                    eos_token_id=self.tokenizer.eos_token_id,
+                )
+        except IndexError:
+            print(f"EXCEEDING DEPTH {depth}, DOUBLING TOKEN LIMITS TO {self.token_limits*2}")
+            self.token_limits*=2
+            self.messages.pop(-1)
+            self.file_up(message, depth=depth+1)
+
+        prompt_length = inputs.input_ids.shape[-1]
+        response_tokens = ids[0][prompt_length:]
+
+        response = self.tokenizer.decode(response_tokens, skip_special_tokens=True)
+
+        self.messages.append(
+            MessageFields().generic_assistant_answer_response(
+                response
+            )
+        )
+
+    def back_up(self):
+        # TODO
+        pass
+
+
+def has_inference(id):
+    model_info = hf_api.model_info(id)
+    return True if model_info.transformers_info.pipeline_tag else False, model_info.transformers_info.pipeline_tag
+
+def inference_client_creation(model_id):
+    return huggingface_hub.InferenceClient(
+        model_id, api_key=API_KEY
+    )
+
+def create_inference_chat(model_id, context=None, token_limits=100):
+    new_chat = InferenceChat()
+    new_chat.token_limits = token_limits
+    new_chat.client = inference_client_creation(
+        model_id
+    )
+
+    generic_message = MessageFields()
+    if context:
+        if type(context) != str:
+            for piece in context:
+                new_chat.file_up(generic_message.generic_context_setting_message(
+                    piece
+                ))
+        else:
+            new_chat.file_up(generic_message.generic_context_setting_message(
+                context
+            ))
+
+    return new_chat
+
+def download_hf_model(model_id, path):
+    huggingface_hub.snapshot_download(
+        repo_id=model_id, local_dir=path
+    )
+
+    loaded = load_downloaded_model(path)
+    if not loaded.model.can_generate():
+        os.rmdir(pathlib.Path(path).absolute())
+        transformers.AutoModelForCausalLM.from_pretrained(
+            model_id, cache_dir=path
+        )
+
+def load_downloaded_model(model_path):
+    model_path = pathlib.Path(model_path)
+
+    model = transformers.AutoModelForCausalLM.from_pretrained(model_path)
+
+    tokenizer = transformers.AutoTokenizer.from_pretrained(
+        model_path
+    )
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+
+    model.eval()
+
+    return LoadedModel(
+        model=model,
+        tokenizer=tokenizer,
+    )
+
+
+# model_id = "Qwen/Qwen2.5-0.5B-Instruct"
+# # download_hf_model(model_id, "./backed_up")
+# model = load_downloaded_model("./backed_up")
+# model.token_limits = 1024
+#
+# model.file_up(
+#     MessageFields().generic_user_message(
+#         "Hi! How's your day going?"
+#     )
+# )
+#
+# while True:
+#     model.file_up(
+#         MessageFields().generic_user_message(
+#             input()
+#         )
+#     )
