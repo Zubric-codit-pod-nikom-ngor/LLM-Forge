@@ -269,18 +269,19 @@ class InferenceChat:
             )
 
 
-class LoadedModel:
+class LoadedModelChat:
 
-    def __init__(self, tokenizer, model, token_limits=100):
+    def __init__(self, tokenizer, model, token_limits=100, temperature=1, top_p=0.9, repetition_penalty=1.05, chat_template=None):
         self.tokenizer = tokenizer
         self.model = model
         self.messages = []
         self.name = ""
-        self.token_limits = 100
-        self.temperature = 1
-        self.top_p = 0.9
-        self.repetition_prenalty = 1.05
-        self.chat_template = None
+        self.token_limits = token_limits
+        self.temperature = temperature
+        self.top_p = top_p
+        self.repetition_penalty = repetition_penalty
+        self.chat_template = chat_template
+        self.enable_thinking = False
 
     def file_up(self, message, depth=0):
         self.messages.append(
@@ -307,7 +308,8 @@ class LoadedModel:
             prompt = self.tokenizer.apply_chat_template(
                 self.messages,
                 tokenize=False,
-                add_generation_prompt=True
+                add_generation_prompt=True,
+                enable_thinking=self.enable_thinking
             )
 
         inputs = self.tokenizer(
@@ -326,7 +328,7 @@ class LoadedModel:
                     **inputs,
                     max_new_tokens = self.token_limits - inputs["input_ids"].shape[-1],
                     temperature=self.temperature,
-                    top_p=self.top_p, repetition_penalty=self.repetition_prenalty,
+                    top_p=self.top_p, repetition_penalty=self.repetition_penalty,
                     pad_token_id=self.tokenizer.eos_token_id,
                     eos_token_id=self.tokenizer.eos_token_id,
                 )
@@ -407,11 +409,55 @@ def load_downloaded_model(model_path):
 
     model.eval()
 
-    return LoadedModel(
+    return LoadedModelChat(
         model=model,
         tokenizer=tokenizer,
     )
 
+def prepare_chat_with_downloaded_model(
+    model_path,
+    context            : Iterable = None,
+    deep_thinking      : bool     = False,
+    token_limits       : int      = 100,
+    temperature        : float    = 1,
+    top_p              : float    = 0.9,
+    repetition_penalty : float    = 1.05,
+    chat_template      : str      = None
+):
+
+    model = load_downloaded_model(model_path)
+    model.token_limits = token_limits
+    model.temperature = temperature
+    model.top_p = top_p
+    model.repetition_penalty = repetition_penalty
+    model.chat_template = chat_template
+
+    message_fields = MessageFields()
+
+    if context:
+        if type(context) == str:
+            model.file_up(
+                message_fields.generic_context_setting_message(
+                    context
+                )
+            )
+        else:
+            for chunk in context:
+                model.file_up(
+                    message_fields.generic_context_setting_message(
+                        chunk
+                    )
+                )
+
+    if deep_thinking:
+        model.enable_thinking = deep_thinking
+        model.file_up(
+            message_fields.generic_context_setting_message(
+                "<|think|>"
+            )
+        )
+
+    return model
 
 # model_id = "Qwen/Qwen2.5-0.5B-Instruct"
 # # download_hf_model(model_id, "./backed_up")
