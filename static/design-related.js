@@ -309,6 +309,20 @@ window.CUSTOM_CONTEXT_OPS = {}
 window.CUSTOM_CONTEXT_PROPS = []
 
 
+try {
+    window.extendSnapshotStates(() => {
+        return {
+            "panelLayoutStates": panelLayoutStates,
+            "IS_SUPPORTING_VIEWPORT_RESIZE": IS_SUPPORTING_VIEWPORT_RESIZE,
+            "window.IS_EDITING": window.IS_EDITING,
+            "window.IS_SNAPPING": window.IS_SNAPPING,
+            "window.CUSTOM_CONTEXT_PROPS": window.CUSTOM_CONTEXT_PROPS
+        }
+    }, "MAINPACKAGE-DESIGN_RELATED")
+    window.initializeStateManager("MAINPACKAGE-DESIGN_RELATED")
+} catch {}
+
+
 function rectify(item) {
     let rect = item.getBoundingClientRect();
     return [

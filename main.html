@@ -3,12 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <title>LLM Forge</title>
-    <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline';" />
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline' 'unsafe-eval';">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="static/stylesheet.css">
     <link rel="stylesheet" href="static/renderStylesheet.css">
     <link rel="stylesheet" href="static/classTags.css">
-
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=BBH+Bartle&family=Google+Sans+Code:ital,wght,MONO@0,300..800,1;1,300..800,1&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Sen:wght@400..800&display=swap" rel="stylesheet">
@@ -27,7 +26,7 @@
     <div style="width: fit-content; height: 1px; position: sticky; top: 7px; left: 7px; z-index: 100; border-image: linear-gradient(to bottom, #ff4400, #ff9900) 1; border-style: solid; border-width: 0; border-left-width: 4px; padding-left: 5.5px; border-radius: 10px; transition: all 0.3s" id="notification-container" class="PosVertically"></div>
 
     <div class="Center"
-         style="box-shadow: black 0 0 100px; width: calc(100% - 50px); height: calc(100% - 50px); background: #2e2e2e; border-radius: 12px; overflow: hidden; z-index: 2">
+         style="box-shadow: black 0 0 100px; width: calc(100% - 50px); height: calc(100% - 50px); background: rgb(62, 62, 62); border-radius: 12px; overflow: hidden; z-index: 2">
         <div class="BorderHoverGlow Center" style="z-index: 2"></div>
         <div class="DarkDiv Center" id="viewport-resize-container"
              style="overflow: hidden; width: calc(100% - 8px); height: calc(100% - 8px); z-index: 3; border: transparent; background: linear-gradient(-135deg, #1F1F1F, #080808)">

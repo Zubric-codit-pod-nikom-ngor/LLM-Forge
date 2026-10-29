@@ -5,7 +5,138 @@ window.pythonPipelineAPI = {
 let EXTENSION_RESOURCE_HOLDER = {}
 let EXTENSION_RELATED_SNIPPETS = {}
 window.EXTENSION_SNIPPET_STARTUP_MUTATION_CALLBACKS = []
-window.favorites = []
+window.favorites = [];
+window.snapshotState = {};
+
+(async () => {
+    let res = await window.pythonPipelineAPI.interactWithPythonPipeline(
+        {
+            "object": "load_lastest_layout",
+            "args": [],
+            "kwargs": {}
+        }
+    )
+
+    window.startupState = res["JS_STATES"]
+
+    let main_container = document.getElementById("viewport-resize-container")
+
+    let creationHelper = (chunk) => {
+        let needEditSwitch = false;
+        if (window.IS_EDITING) {
+            window.switch_editing()
+            needEditSwitch = true;
+        }
+
+        let needSnapSwitch = false;
+        if (window.IS_SNAPPING) {
+            window.switch_docking()
+            needSnapSwitch = true;
+        }
+
+        main_container.appendChild(chunk)
+        if (chunk.classList.contains("DraggableDiv")) {
+            window.updateDraggable(chunk)
+        }
+        if (chunk.classList.contains("ResizeableDiv")) {
+            window.updateResizeable(chunk)
+        }
+
+        let snapshot = idDupeObs.takeRecords()
+        for (const mutation of snapshot) {
+            if (mutation.addedNodes.length > 0) {
+                mutation.addedNodes.forEach(node => {
+                    if (node.nodeType === 1) {
+                        let res = checkDupedId(node)
+                        if (res) {
+                            notify("Cannot create this Element! Id already matches!")
+                            node.remove()
+                        }
+                    }
+                })
+            }
+        }
+
+        window.EXTENSION_SNIPPET_STARTUP_MUTATION_CALLBACKS.forEach(
+            (fn) => fn(snapshot)
+        )
+
+        if (needEditSwitch) {
+            window.switch_editing()
+        }
+        if (needSnapSwitch) {
+            window.switch_docking()
+        }
+    }
+
+    let temp_container = document.createElement("div")
+    temp_container.innerHTML = res["HTML_PART"]
+    Array.from(temp_container.children).forEach(child => creationHelper(child))
+
+    return res;
+})()
+
+
+function genericSetter(what, value) {
+    eval(what+" = "+JSON.stringify(value))
+}
+
+function initializeStateManager(script_id, generic_setter=genericSetter) {
+    if (Object.keys(window.startupState).length > 0 && window.startupState[script_id]) {
+        Object.keys(window.startupState[script_id]).forEach(key => {
+            try {
+                generic_setter(key, window.startupState[script_id][key])
+                console.log("SETUP FOR "+key+" COMPLETED IN "+script_id)
+            } catch {
+                console.warn("NO ITEM WAS PROVIDED FOR VARIABLE " + key + " OF " + script_id + " STATE MANAGER")
+            }
+        })
+    }
+}
+window.initializeStateManager = initializeStateManager
+
+function extendSnapshotStates(object_list, script_id) {
+    if (!script_id) console.error("NO SCRIPT ID WAS PROVIDED FOR SNAPSHOT EXTENSION")
+    window.snapshotState[script_id] = object_list
+}
+window.extendSnapshotStates  = extendSnapshotStates
+
+function preserveJSState() {
+    let state = {}
+    Object.keys(window.snapshotState).forEach((key) => {
+        let values = window.snapshotState[key]()
+        state[key] = values
+    })
+
+    return state
+}
+
+let sigmaUnload = async () => {
+    // e.preventDefault();
+
+    let items = []
+    Array.from(document.getElementById("viewport-resize-container").children).forEach((item) => {
+        if (item.getAttribute("itemext")) {
+            items.push(item)
+        }
+    })
+
+    let total_innerHtml = ""
+    items.forEach((item) => {
+        total_innerHtml+="\n"+item.outerHTML
+    })
+
+    console.log(await window.pythonPipelineAPI.interactWithPythonPipeline(
+        {
+            "object": "preserve_layout",
+            "args": [total_innerHtml, preserveJSState()],
+            "kwargs": {}
+        }
+    ))
+
+    // e.returnValue = ""
+}
+// window.addEventListener("beforeunload", )
 
 
 async function injectExtensions() {
@@ -334,8 +465,6 @@ async function main() {
                     needSnapSwitch = true;
                 }
 
-                console.log(needEditSwitch, window.IS_EDITING)
-
                 let newItem = document.createElement("div")
                 newItem.innerHTML = EXTENSION_RESOURCE_HOLDER[extension]["snippets"][snippet]
                 snippetContainer.appendChild(newItem.childNodes[0])
@@ -349,7 +478,6 @@ async function main() {
                 EXTENSION_RELATED_SNIPPETS[extension].push(snippetContainer.lastElementChild)
 
                 let snapshot = idDupeObs.takeRecords()
-                console.log(snapshot)
                 for (const mutation of snapshot) {
                     if (mutation.addedNodes.length > 0) {
                         mutation.addedNodes.forEach(node => {

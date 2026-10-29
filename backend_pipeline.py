@@ -5,6 +5,7 @@ import json
 import math
 import os
 import pathlib
+import shutil
 import sys
 import time
 import huggingface_hub
@@ -19,38 +20,134 @@ import torch
 
 
 
-hf_api = huggingface_hub.HfApi()
-
-settings: dict = None
-
-
-
 def load_settings():
-    with open("settings.json", "r") as file:
-        global settings
-        settings = json.load(file)
+    try:
+        with open(backed_up_path / "settings.json", "r") as file:
+            global settings
+            settings = json.load(file)
+    except:
+        backed_up_path.mkdir(exist_ok=True)
+        obj = {
+            "token": None,
+            "UI": {
+                "IS_SUPPORTING_VIEWPORT_RESIZE": False,
+                "IS_DOCKING": False
+            },
+            "EXTENSIONS": {},
+        }
+
+        with open(backed_up_path / "settings.json", "w") as file:
+            json.dump(
+                obj, file,
+                indent=4
+            )
+
+        return obj
+
     return settings
+
+def pass_current_settings(): return settings
 
 def update_setting(path, value):
     settings[path] = value
-    with open("settings.json", "w") as file:
+    backed_up_path.mkdir(exist_ok=True)
+    with open(backed_up_path / "settings.json", "w") as file:
         json.dump(settings, file, indent=4)
     return settings
 
 def update_ui_setting(path, value):
     settings["UI"][path] = value
-    with open("settings.json", "w") as file:
+    backed_up_path.mkdir(exist_ok=True)
+    with open(backed_up_path / "settings.json", "w") as file:
         json.dump(settings, file, indent=4)
     return settings
 
+def get_path_map():
+    try:
+        (backed_up_path / "essential").mkdir(exist_ok=True)
+        with open(backed_up_path / "essential" / "path_map.json", "r") as file:
+            maping = json.load(file)
+        return maping
+    except:
+        with open(backed_up_path / "essential" / "path_map.json", "w") as file:
+            file.write("{}")
+        return {}
+
+def map_path(path, value):
+    global path_map
+    path_map[value] = path
+    (backed_up_path / "essential").mkdir(exist_ok=True)
+    with open(backed_up_path / "essential" / "path_map.json", "w") as file:
+        json.dump(path_map, file, indent=4)
+
+def audit_layouts():
+    layouts_path = backed_up_path / "layouts"
+    if layouts_path.exists():
+        if len(os.listdir(layouts_path)) == 0: return True
+
+        latest_backup = layouts_path / "latest"
+        if latest_backup.exists():
+            file_extensions = list(set(map(lambda i: (pathlib.Path(latest_backup)/i).suffix, os.listdir(latest_backup))))
+            if (len(file_extensions) != 2 or ".html" not in file_extensions or ".json" not in file_extensions): return False
+
+        outsider_file_extensions = list(set(map(lambda i: (pathlib.Path(layouts_path) / i).suffix, os.listdir(layouts_path))))
+        if len(outsider_file_extensions) != 2 or ".html" not in outsider_file_extensions or ".json" not in outsider_file_extensions: return False
+
+    else: layouts_path.mkdir(exist_ok=True)
+    return True
+
+def preserve_layout(html, js):
+
+    layouts_path = backed_up_path / "layouts"
+    shutil.rmtree(layouts_path)
+    layouts_path.mkdir(exist_ok=True)
+
+    with open(layouts_path / "config.json", "w") as file:
+        json.dump(js, file)
+
+    with open(layouts_path / "main_container.html", "w") as file:
+        file.write(html)
+
+    return None
+
+def load_lastest_layout():
+    layouts_path = backed_up_path / "layouts"
+
+    js_states = {}
+    html_part = ""
+
+    if len(os.listdir(layouts_path)) > 0 and audit_layouts():
+
+        with open(layouts_path / "config.json", "r") as file:
+            js_states = json.load(file)
+        with open(layouts_path / "main_container.html", "r") as file:
+            html_part = file.read()
+
+    return {
+        "JS_STATES": js_states,
+        "HTML_PART": html_part
+    }
 
 
-with open(".\\test_token", "r") as file:
-    API_KEY = file.read()
-    huggingface_hub.login(
-        API_KEY,
-        skip_if_logged_in=True
-    )
+hf_api = huggingface_hub.HfApi()
+
+backed_up_path = pathlib.Path("./backed_up").absolute()
+
+settings: dict = load_settings()
+
+path_map: dict = get_path_map()
+
+API_KEY = settings["token"]
+huggingface_hub.login(
+    API_KEY,
+    skip_if_logged_in=True
+)
+
+if not audit_layouts(): shutil.rmtree(
+    backed_up_path / "layouts"
+)
+
+
 
 def get_model_download_size(id):
     repo_info = hf_api.model_info(repo_id=id, files_metadata=True)
@@ -199,8 +296,8 @@ def main():
             )
 
 
-# if __name__ == "__main__":
-#     main()
+if __name__ == "__main__":
+    main()
 
 
 class MessageFields:
@@ -341,13 +438,16 @@ class LoadedModelChat:
         prompt_length = inputs.input_ids.shape[-1]
         response_tokens = ids[0][prompt_length:]
 
-        response = self.tokenizer.decode(response_tokens, skip_special_tokens=True)
+        response = self.tokenizer.decode(response_tokens, skip_special_tokens=False)
 
         self.messages.append(
             MessageFields().generic_assistant_answer_response(
                 response
             )
         )
+
+    def discard(self):
+        return self.messages[-1]["content"]
 
     def back_up(self):
         # TODO
@@ -399,7 +499,9 @@ def download_hf_model(model_id, path):
 def load_downloaded_model(model_path):
     model_path = pathlib.Path(model_path)
 
-    model = transformers.AutoModelForCausalLM.from_pretrained(model_path)
+    model = transformers.AutoModelForCausalLM.from_pretrained(
+        model_path, trust_remote_code=True
+    )
 
     tokenizer = transformers.AutoTokenizer.from_pretrained(
         model_path
@@ -451,7 +553,7 @@ def prepare_chat_with_downloaded_model(
 
     if deep_thinking:
         model.enable_thinking = deep_thinking
-        model.file_up(
+        model.messages.append(
             message_fields.generic_context_setting_message(
                 "<|think|>"
             )
@@ -459,16 +561,25 @@ def prepare_chat_with_downloaded_model(
 
     return model
 
-# model_id = "Qwen/Qwen2.5-0.5B-Instruct"
-# # download_hf_model(model_id, "./backed_up")
+
+model_id = "Qwen/Qwen2.5-0.5B-Instruct"
+# model_id = "deepseek-ai/DeepSeek-OCR-2"
+# model = prepare_chat_with_downloaded_model("./backed_up", deep_thinking=True)
+# download_hf_model(model_id, "./backed_up")
 # model = load_downloaded_model("./backed_up")
 # model.token_limits = 1024
-#
+
+# print(
+#     "think" in model.tokenizer.chat_template or \
+#     "enable_thinking" in model.tokenizer.chat_template
+# )
 # model.file_up(
 #     MessageFields().generic_user_message(
-#         "Hi! How's your day going?"
+#         "Can you please teach me pressure in physics?"
 #     )
 # )
+#
+# print(model.discard())
 #
 # while True:
 #     model.file_up(
@@ -476,3 +587,5 @@ def prepare_chat_with_downloaded_model(
 #             input()
 #         )
 #     )
+#     print(model.discard())
+#     print(model.messages)

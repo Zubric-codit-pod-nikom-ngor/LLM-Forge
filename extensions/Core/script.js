@@ -11,6 +11,18 @@ let SVGs = {
     "document": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAtElEQVR4nO3WQQrCQBBE0TqFiPc/kiiepiQwCxFcRLpqkun60GQZHukhA6RzReE8AFxXgBDAC8DNCanOjqEY8vx4StdMDbkAuDu+DMUQuDA0QCwYmiByDI2QLRnGDZFhZkAkmFmQcozjz77nbrYEhBUvnB0DGQVSHAPpBmHx/CqQdqvlioF0g1B0uL8LpN1quWIg3SBc5YrCVSCuGMgokOIYyCiQ4hjIKJCjQniQ+btlIAnm3gBxwrjC8DB8AAAAAElFTkSuQmCC"
 }
 
+
+window.extendSnapshotStates(() => {
+    return {
+        "LAST_QUICK_CALL_TIME": LAST_QUICK_CALL_TIME,
+        "QUICK_CALL_GAP": QUICK_CALL_GAP,
+        "QUICK_CALL_GEN": QUICK_CALL_GEN,
+        "StarCounter": StarCounter
+    }
+}, "core-main")
+window.initializeStateManager("core-main")
+
+
 async function quickSearch() {
     const myGeneration = ++QUICK_CALL_GEN
 
@@ -419,12 +431,27 @@ function areEqual(arr1, arr2) {
     return true;
 }
 
+async function setupModel(item, node) {
+    console.log(item);
+    node.children[0].innerHTML = "";
+
+
+}
+
 window.EXTENSION_SNIPPET_STARTUP_MUTATION_CALLBACKS.push(
     (mutations) => {
         for (let mutation of mutations) {
             if (mutation.addedNodes.length === 0) return
             mutation.addedNodes.forEach(node => {
                 if (!(node.nodeType === 1)) return
+                if (node.getAttribute("itemext") === "core-modelSearch") {
+                    node.children[0].children[0].children[0].addEventListener("keydown", (e) => {
+                        if (e.key === "Enter") {
+                            e.preventDefault();
+                            quickSearch()
+                        }
+                    })
+                }
                 if (node.getAttribute("itemext") === "core-modelInfo") {
                     let card = document.getElementById("core-modelInfo-cardRender")
                     let target = document.getElementById("core-modelInfo-entry")
@@ -663,6 +690,45 @@ window.EXTENSION_SNIPPET_STARTUP_MUTATION_CALLBACKS.push(
                         }
                     })()
                 }
+                // if (node.getAttribute("itemext") === "core-modelSetup") {
+                //     let card = document.getElementById("core-modelSetup-cardRender")
+                //     let target = document.getElementById("core-modelSetup-entry")
+                //
+                //     target.parentElement.removeChild(card)
+                //
+                //     target.addEventListener("dragenter", () => {
+                //         target.firstElementChild.classList.add("AuroraRim-rim")
+                //         target.classList.add("AuroraRim")
+                //         target.firstElementChild.style.opacity = "1"
+                //     })
+                //
+                //     target.addEventListener("dragleave", () => {
+                //         target.firstElementChild.classList.remove("AuroraRim-rim")
+                //         target.classList.remove("AuroraRim")
+                //         target.firstElementChild.style.opacity = "0"
+                //     })
+                //
+                //     target.addEventListener("dragover", (e) => {
+                //         e.preventDefault();
+                //         target.firstElementChild.classList.add("AuroraRim-rim")
+                //         target.classList.add("AuroraRim")
+                //         target.firstElementChild.style.opacity = "1"
+                //         e.dataTransfer.dropEffect = 'move';
+                //     });
+                //
+                //     target.addEventListener("drop", (e) => {
+                //         if (!Array.from(target.parentElement.childNodes).some(i => i === card)) {
+                //             target.parentElement.appendChild(card)
+                //         }
+                //         e.preventDefault();
+                //         target.firstElementChild.classList.remove("AuroraRim-rim")
+                //         target.classList.remove("AuroraRim")
+                //         target.firstElementChild.style.opacity = "0"
+                //         setupModel(e.dataTransfer.getData('text/plain'), card.lastElementChild);
+                //     })
+                //
+                //     target.id = null
+                // }
             })
         }
     }

@@ -6,6 +6,8 @@ const {
 } = require("./static/python-pipeline");
 const MD = require("marked")
 const hljs = require("highlight.js");
+const esprima = require("esprima")
+const eslintScope = require("eslint-scope")
 
 MD.use({
     renderer: {
@@ -28,4 +30,12 @@ contextBridge.exposeInMainWorld("pythonPipelineAPI", {
 
 contextBridge.exposeInMainWorld("MD", {
     parse: MD.parse,
+})
+
+contextBridge.exposeInMainWorld("esprima", {
+    parseScript: esprima.parseScript,
+})
+
+contextBridge.exposeInMainWorld("eslintScope", {
+    analyze: eslintScope.analyze
 })
