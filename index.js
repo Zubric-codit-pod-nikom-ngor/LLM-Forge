@@ -51,7 +51,6 @@ async function createWindow() {
         });
         pipeline.wipePythonPipeline();
         console.log(width, height, isMaximized);
-        e.returnValue = true;
     })
 
     win.show()

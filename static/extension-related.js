@@ -33,8 +33,7 @@ function preserveJSState() {
     return state
 }
 
-let sigmaUnload = async () => {
-    // e.preventDefault();
+let sigmaUnload = async (e) => {
 
     start_extra_load()
 
@@ -90,24 +89,23 @@ let sigmaUnload = async () => {
     ]
 
     argstates.forEach(async (argstate) => {
-        await window.pythonPipelineAPI.interactWithPythonPipeline({
+        window.pythonPipelineAPI.interactWithPythonPipeline({
             "object": "update_ui_setting",
             "args": argstate,
             "kwargs": {}
         })
     })
 
-    await window.pythonPipelineAPI.interactWithPythonPipeline({
+    window.pythonPipelineAPI.interactWithPythonPipeline({
         "object": "update_setting",
         "args": ["EXTENSIONS", EXTENSION_STATUSES],
         "kwargs": {}
     })
 
-    await end_extra_load()
-
-    // e.returnValue = ""
+    end_extra_load()
 }
-// window.addEventListener("beforeunload", )
+
+window.addEventListener("beforeunload", sigmaUnload)
 
 let _pendingExtensionScriptLoads = []
 
