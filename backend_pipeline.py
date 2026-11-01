@@ -31,7 +31,11 @@ def load_settings():
             "token": None,
             "UI": {
                 "IS_SUPPORTING_VIEWPORT_RESIZE": False,
-                "IS_DOCKING": False
+                "IS_DOCKING": False,
+                "IS_EDITING": False,
+                "WINDOW_WIDTH": 800,
+                "WINDOW_HEIGHT": 600,
+                "MAXIMIZED": False,
             },
             "EXTENSIONS": {},
         }
@@ -64,7 +68,7 @@ def update_ui_setting(path, value):
 
 def get_path_map():
     try:
-        (backed_up_path / "essential").mkdir(exist_ok=True)
+        (backed_up_path / "essential").mkdir(exist_ok=True, parents=True)
         with open(backed_up_path / "essential" / "path_map.json", "r") as file:
             maping = json.load(file)
         return maping
@@ -76,34 +80,31 @@ def get_path_map():
 def map_path(path, value):
     global path_map
     path_map[value] = path
-    (backed_up_path / "essential").mkdir(exist_ok=True)
+    (backed_up_path / "essential").mkdir(exist_ok=True, parents=True)
     with open(backed_up_path / "essential" / "path_map.json", "w") as file:
         json.dump(path_map, file, indent=4)
 
 def audit_layouts():
     layouts_path = backed_up_path / "layouts"
-    if layouts_path.exists():
-        if len(os.listdir(layouts_path)) == 0: return True
+    latest_backup = layouts_path / "latest"
 
-        latest_backup = layouts_path / "latest"
-        if latest_backup.exists():
-            file_extensions = list(set(map(lambda i: (pathlib.Path(latest_backup)/i).suffix, os.listdir(latest_backup))))
-            if (len(file_extensions) != 2 or ".html" not in file_extensions or ".json" not in file_extensions): return False
+    layouts_path.mkdir(parents=True, exist_ok=True)
+    latest_backup.mkdir(parents=True, exist_ok=True)
 
-        outsider_file_extensions = list(set(map(lambda i: (pathlib.Path(layouts_path) / i).suffix, os.listdir(layouts_path))))
-        if len(outsider_file_extensions) != 2 or ".html" not in outsider_file_extensions or ".json" not in outsider_file_extensions: return False
+    contents = os.listdir(latest_backup)
+    if not contents:
+        return True
 
-    else: layouts_path.mkdir(exist_ok=True)
-    return True
+    extensions = {pathlib.Path(name).suffix for name in contents}
+    return extensions == {".html", ".json"}
 
 def preserve_layout(html, js):
 
-    layouts_path = backed_up_path / "layouts"
-    shutil.rmtree(layouts_path)
-    layouts_path.mkdir(exist_ok=True)
+    layouts_path = (backed_up_path / "layouts") / "latest"
+    layouts_path.mkdir(exist_ok=True, parents=True)
 
     with open(layouts_path / "config.json", "w") as file:
-        json.dump(js, file)
+        json.dump(js, file, indent=4)
 
     with open(layouts_path / "main_container.html", "w") as file:
         file.write(html)
@@ -111,7 +112,8 @@ def preserve_layout(html, js):
     return None
 
 def load_lastest_layout():
-    layouts_path = backed_up_path / "layouts"
+    layouts_path = (backed_up_path / "layouts") / "latest"
+    if not layouts_path.exists(): layouts_path.mkdir(exist_ok=True, parents=True)
 
     js_states = {}
     html_part = ""

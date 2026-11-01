@@ -224,7 +224,6 @@ async function timelessPersistentParticles(new_key, clump, timeSpent=10, animati
 
     await Promise.allSettled(clump.map(item => itemMonitor(item)))
     clump.forEach(item => item.item.remove())
-    // await animateParticleClump("always_true", clump, true, timeSpent, animationTime, animation)
 
     return clump
 }
@@ -280,7 +279,7 @@ window.ParticleSystem = {
 var global_particle_animations = [false]
 var global_particle_clumps = [[]]
 var global_particle_task_keys = [null]
-const panelLayoutStates = new WeakMap();
+let panelLayoutStates = {};
 
 const RESIZE_BORDER = 7.5;
 const MIN_SIZE = 60;
@@ -307,20 +306,6 @@ const AXES = {
 
 window.CUSTOM_CONTEXT_OPS = {}
 window.CUSTOM_CONTEXT_PROPS = []
-
-
-try {
-    window.extendSnapshotStates(() => {
-        return {
-            "panelLayoutStates": panelLayoutStates,
-            "IS_SUPPORTING_VIEWPORT_RESIZE": IS_SUPPORTING_VIEWPORT_RESIZE,
-            "window.IS_EDITING": window.IS_EDITING,
-            "window.IS_SNAPPING": window.IS_SNAPPING,
-            "window.CUSTOM_CONTEXT_PROPS": window.CUSTOM_CONTEXT_PROPS
-        }
-    }, "MAINPACKAGE-DESIGN_RELATED")
-    window.initializeStateManager("MAINPACKAGE-DESIGN_RELATED")
-} catch {}
 
 
 function rectify(item) {
@@ -442,7 +427,6 @@ function updateDraggable(item) {
                 }
             }
 
-            // === ДОБАВИТЬ ЭТО: Обновляем привязки после отпускания мыши ===
             updatePanelAnchors(item);
         }
 
@@ -506,7 +490,6 @@ function updateResizeable(item) {
         item._busy = true;
 
         if (dir) {
-            // item.style.border = "0";
             let grad_rot
             let color = "#ff3c00"
             if (dir == "s") {item.style.borderBottom = "5px solid "+color; grad_rot = 90}
@@ -892,18 +875,65 @@ function switch_viewport_resize() {
     IS_SUPPORTING_VIEWPORT_RESIZE = !IS_SUPPORTING_VIEWPORT_RESIZE
 }
 
+window.switch_editing = switch_editing;
+window.switch_docking = switch_docking;
+window.switch_viewport_resize = switch_viewport_resize;
+
+if (window.extendSnapshotStates) {
+
+    console.log('LOADING PRIMARY DESIGN RELATED FEATURES')
+
+    window.extendSnapshotStates(() => {
+        return {
+            "panelLayoutStates": panelLayoutStates,
+            "IS_SUPPORTING_VIEWPORT_RESIZE": IS_SUPPORTING_VIEWPORT_RESIZE,
+            "window.CUSTOM_CONTEXT_PROPS": window.CUSTOM_CONTEXT_PROPS
+        }
+    }, "MAINPACKAGE-DESIGN_RELATED")
+    window.initializeStateManager("MAINPACKAGE-DESIGN_RELATED");
+
+    (async () => {
+        let settings = await window.pythonPipelineAPI.interactWithPythonPipeline({
+            "object": "pass_current_settings",
+            "args": [],
+            "kwargs": {}
+        })
+
+        console.log(settings)
+        if (settings["UI"]["IS_SUPPORTING_VIEWPORT_RESIZE"] === true) {
+            IS_SUPPORTING_VIEWPORT_RESIZE = false
+            switch_viewport_resize()
+        } else {IS_SUPPORTING_VIEWPORT_RESIZE = false}
+        if (settings["UI"]["IS_DOCKING"] === true) {
+            switch_docking()
+        }
+        if (settings["UI"]["IS_EDITING"] === true) {
+            switch_editing()
+        }
+    })()
+
+}
 
 
 function getLayoutState(el) {
-    if (!panelLayoutStates.has(el)) {
-        panelLayoutStates.set(el, {
+    let el_id = [...MAIN_CONTAINER.children].indexOf(el)
+    if (!panelLayoutStates.hasOwnProperty(el_id)) {
+        panelLayoutStates[el_id] = {
             initialWidth: el.offsetWidth,
             initialHeight: el.offsetHeight,
             anchors: {left: null, right: null, top: null, bottom: null},
             margins: {left: 0, right: 0, top: 0, bottom: 0}
-        });
+        };
     }
-    return panelLayoutStates.get(el);
+    return panelLayoutStates[el_id];
+}
+
+function getElementByIndex(idx) {
+    if (idx === null || idx === undefined || idx === 'viewport') return null;
+    if (!MAIN_CONTAINER) return null;
+    const children = MAIN_CONTAINER.children;
+    const node = children[idx];
+    return node || null;
 }
 
 function updatePanelAnchors(el) {
@@ -938,11 +968,13 @@ function updatePanelAnchors(el) {
         const otherRect = other.getBoundingClientRect();
         const overlapY = rect.bottom > otherRect.top + ANCHOR_DOCK_MARGIN && rect.top < otherRect.bottom - ANCHOR_DOCK_MARGIN;
         const overlapX = rect.right > otherRect.left + ANCHOR_DOCK_MARGIN && rect.left < otherRect.right - ANCHOR_DOCK_MARGIN;
+        const otherIdx = [...MAIN_CONTAINER.children].indexOf(other);
+        if (otherIdx < 0) return;
 
-        if (Math.abs(rect.right - otherRect.left) < ANCHOR_DOCK_MARGIN * 2 && overlapY) state.anchors.right = other;
-        if (Math.abs(rect.left - otherRect.right) < ANCHOR_DOCK_MARGIN * 2 && overlapY) state.anchors.left = other;
-        if (Math.abs(rect.bottom - otherRect.top) < ANCHOR_DOCK_MARGIN * 2 && overlapX) state.anchors.bottom = other;
-        if (Math.abs(rect.top - otherRect.bottom) < ANCHOR_DOCK_MARGIN * 2 && overlapX) state.anchors.top = other;
+        if (Math.abs(rect.right - otherRect.left) < ANCHOR_DOCK_MARGIN * 2 && overlapY) state.anchors.right = otherIdx;
+        if (Math.abs(rect.left - otherRect.right) < ANCHOR_DOCK_MARGIN * 2 && overlapY) state.anchors.left = otherIdx;
+        if (Math.abs(rect.bottom - otherRect.top) < ANCHOR_DOCK_MARGIN * 2 && overlapX) state.anchors.bottom = otherIdx;
+        if (Math.abs(rect.top - otherRect.bottom) < ANCHOR_DOCK_MARGIN * 2 && overlapX) state.anchors.top = otherIdx;
     });
 }
 
@@ -954,19 +986,23 @@ function collectClosedChain(el, axis) {
     while (true) {
         const a = getLayoutState(cur).anchors[axis.start];
         if (a === 'viewport') break;
-        if (!a || seen.has(a)) return null;
-        seen.add(a);
-        chain.unshift(a);
-        cur = a;
+        if (a === null || a === undefined) return null;
+        const nextEl = getElementByIndex(a);
+        if (!nextEl || seen.has(nextEl)) return null;
+        seen.add(nextEl);
+        chain.unshift(nextEl);
+        cur = nextEl;
     }
     cur = el;
     while (true) {
         const a = getLayoutState(cur).anchors[axis.end];
         if (a === 'viewport') break;
-        if (!a || seen.has(a)) return null;
-        seen.add(a);
-        chain.push(a);
-        cur = a;
+        if (a === null || a === undefined) return null;
+        const nextEl = getElementByIndex(a);
+        if (!nextEl || seen.has(nextEl)) return null;
+        seen.add(nextEl);
+        chain.push(nextEl);
+        cur = nextEl;
     }
     return chain;
 }
@@ -1067,10 +1103,16 @@ function resolveLayout() {
                 let leftPos = null, rightPos = null;
 
                 if (anchors.left === 'viewport') leftPos = containerRect.left + state.margins.left;
-                else if (anchors.left) leftPos = anchors.left.getBoundingClientRect().right + ANCHOR_DOCK_MARGIN;
+                else if (anchors.left !== null && anchors.left !== undefined) {
+                    const anchorEl = getElementByIndex(anchors.left);
+                    if (anchorEl) leftPos = anchorEl.getBoundingClientRect().right + ANCHOR_DOCK_MARGIN;
+                }
 
                 if (anchors.right === 'viewport') rightPos = containerRect.right - state.margins.right;
-                else if (anchors.right) rightPos = anchors.right.getBoundingClientRect().left - ANCHOR_DOCK_MARGIN;
+                else if (anchors.right !== null && anchors.right !== undefined) {
+                    const anchorEl = getElementByIndex(anchors.right);
+                    if (anchorEl) rightPos = anchorEl.getBoundingClientRect().left - ANCHOR_DOCK_MARGIN;
+                }
 
                 if (leftPos !== null) newLeft = leftPos - containerRect.left;
                 else if (rightPos !== null) newLeft = (rightPos - containerRect.left) - newWidth;
@@ -1088,10 +1130,16 @@ function resolveLayout() {
                 let topPos = null, bottomPos = null;
 
                 if (anchors.top === 'viewport') topPos = containerRect.top + state.margins.top;
-                else if (anchors.top) topPos = anchors.top.getBoundingClientRect().bottom + ANCHOR_DOCK_MARGIN;
+                else if (anchors.top !== null && anchors.top !== undefined) {
+                    const anchorEl = getElementByIndex(anchors.top);
+                    if (anchorEl) topPos = anchorEl.getBoundingClientRect().bottom + ANCHOR_DOCK_MARGIN;
+                }
 
                 if (anchors.bottom === 'viewport') bottomPos = containerRect.bottom - state.margins.bottom;
-                else if (anchors.bottom) bottomPos = anchors.bottom.getBoundingClientRect().top - ANCHOR_DOCK_MARGIN;
+                else if (anchors.bottom !== null && anchors.bottom !== undefined) {
+                    const anchorEl = getElementByIndex(anchors.bottom);
+                    if (anchorEl) bottomPos = anchorEl.getBoundingClientRect().top - ANCHOR_DOCK_MARGIN;
+                }
 
                 if (topPos !== null) newTop = topPos - containerRect.top;
                 else if (bottomPos !== null) newTop = (bottomPos - containerRect.top) - newHeight;
@@ -1298,3 +1346,5 @@ addEventListener("contextmenu", async (e) => {
 })
 
 window.bounceWhenClicked = bounceWhenClicked
+
+window.isFullyLoaded("MAINPACKAGE-DESIGN_RELATED")

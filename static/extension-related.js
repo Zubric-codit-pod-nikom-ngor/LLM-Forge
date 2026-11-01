@@ -1,99 +1,21 @@
 window.pythonPipelineAPI = {
-    "interactWithPythonPipeline": window.pythonPipelineAPI.interactWithPythonPipeline
+    interactWithPythonPipeline: window.pythonPipelineAPI.interactWithPythonPipeline
 };
 
 let EXTENSION_RESOURCE_HOLDER = {}
-let EXTENSION_RELATED_SNIPPETS = {}
+window.EXTENSION_RELATED_SNIPPETS = {}
+let EXTENSION_STATUSES = {}
 window.EXTENSION_SNIPPET_STARTUP_MUTATION_CALLBACKS = []
+window.EXTENSION_SNIPPET_UNLOAD_MUTATION_CALLBACKS = []
 window.favorites = [];
 window.snapshotState = {};
-
-(async () => {
-    let res = await window.pythonPipelineAPI.interactWithPythonPipeline(
-        {
-            "object": "load_lastest_layout",
-            "args": [],
-            "kwargs": {}
-        }
-    )
-
-    window.startupState = res["JS_STATES"]
-
-    let main_container = document.getElementById("viewport-resize-container")
-
-    let creationHelper = (chunk) => {
-        let needEditSwitch = false;
-        if (window.IS_EDITING) {
-            window.switch_editing()
-            needEditSwitch = true;
-        }
-
-        let needSnapSwitch = false;
-        if (window.IS_SNAPPING) {
-            window.switch_docking()
-            needSnapSwitch = true;
-        }
-
-        main_container.appendChild(chunk)
-        if (chunk.classList.contains("DraggableDiv")) {
-            window.updateDraggable(chunk)
-        }
-        if (chunk.classList.contains("ResizeableDiv")) {
-            window.updateResizeable(chunk)
-        }
-
-        let snapshot = idDupeObs.takeRecords()
-        for (const mutation of snapshot) {
-            if (mutation.addedNodes.length > 0) {
-                mutation.addedNodes.forEach(node => {
-                    if (node.nodeType === 1) {
-                        let res = checkDupedId(node)
-                        if (res) {
-                            notify("Cannot create this Element! Id already matches!")
-                            node.remove()
-                        }
-                    }
-                })
-            }
-        }
-
-        window.EXTENSION_SNIPPET_STARTUP_MUTATION_CALLBACKS.forEach(
-            (fn) => fn(snapshot)
-        )
-
-        if (needEditSwitch) {
-            window.switch_editing()
-        }
-        if (needSnapSwitch) {
-            window.switch_docking()
-        }
-    }
-
-    let temp_container = document.createElement("div")
-    temp_container.innerHTML = res["HTML_PART"]
-    Array.from(temp_container.children).forEach(child => creationHelper(child))
-
-    return res;
-})()
-
-
-function genericSetter(what, value) {
-    eval(what+" = "+JSON.stringify(value))
+window.EXTENSIONS_INJECTED = false
+window.EXTENSION_RESOURCE_HOLDER = EXTENSION_RESOURCE_HOLDER
+let LOADED_LAYOUT = false;
+let LOADED_SCRIPTS = {}
+window.isFullyLoaded = (script) => {
+    LOADED_SCRIPTS[script] = true;
 }
-
-function initializeStateManager(script_id, generic_setter=genericSetter) {
-    if (Object.keys(window.startupState).length > 0 && window.startupState[script_id]) {
-        Object.keys(window.startupState[script_id]).forEach(key => {
-            try {
-                generic_setter(key, window.startupState[script_id][key])
-                console.log("SETUP FOR "+key+" COMPLETED IN "+script_id)
-            } catch {
-                console.warn("NO ITEM WAS PROVIDED FOR VARIABLE " + key + " OF " + script_id + " STATE MANAGER")
-            }
-        })
-    }
-}
-window.initializeStateManager = initializeStateManager
 
 function extendSnapshotStates(object_list, script_id) {
     if (!script_id) console.error("NO SCRIPT ID WAS PROVIDED FOR SNAPSHOT EXTENSION")
@@ -114,30 +36,80 @@ function preserveJSState() {
 let sigmaUnload = async () => {
     // e.preventDefault();
 
+    start_extra_load()
+
     let items = []
     Array.from(document.getElementById("viewport-resize-container").children).forEach((item) => {
         if (item.getAttribute("itemext")) {
             items.push(item)
+            EXTENSION_SNIPPET_UNLOAD_MUTATION_CALLBACKS.forEach(fn => fn(item))
         }
     })
+
+    let were_switched = {
+        "editing": window.IS_EDITING,
+        "docking": window.IS_SNAPPING
+    }
+
+    if (window.IS_SNAPPING) {
+        window.switch_docking()
+        were_switched["docking"] = true
+    }
+    if (window.IS_EDITING) {
+        window.switch_editing()
+        were_switched["editing"] = true
+    }
 
     let total_innerHtml = ""
     items.forEach((item) => {
         total_innerHtml+="\n"+item.outerHTML
     })
 
+    let JS_STATE = preserveJSState()
+    console.log(JS_STATE)
+
+    if (were_switched["editing"]) {
+        window.switch_editing()
+    }
+    if (were_switched["docking"]) {
+        window.switch_docking()
+    }
+
     console.log(await window.pythonPipelineAPI.interactWithPythonPipeline(
         {
             "object": "preserve_layout",
-            "args": [total_innerHtml, preserveJSState()],
+            "args": [total_innerHtml, JS_STATE],
             "kwargs": {}
         }
     ))
+
+    let argstates = [
+        ["IS_SUPPORTING_VIEWPORT_RESIZE", JS_STATE["MAINPACKAGE-DESIGN_RELATED"]["IS_SUPPORTING_VIEWPORT_RESIZE"]],
+        ["IS_DOCKING", window.IS_SNAPPING || were_switched["docking"]],
+        ["IS_EDITING", window.IS_EDITING || were_switched["editing"]],
+    ]
+
+    argstates.forEach(async (argstate) => {
+        await window.pythonPipelineAPI.interactWithPythonPipeline({
+            "object": "update_ui_setting",
+            "args": argstate,
+            "kwargs": {}
+        })
+    })
+
+    await window.pythonPipelineAPI.interactWithPythonPipeline({
+        "object": "update_setting",
+        "args": ["EXTENSIONS", EXTENSION_STATUSES],
+        "kwargs": {}
+    })
+
+    await end_extra_load()
 
     // e.returnValue = ""
 }
 // window.addEventListener("beforeunload", )
 
+let _pendingExtensionScriptLoads = []
 
 async function injectExtensions() {
     let init_path = ".\\extensions"
@@ -152,6 +124,7 @@ async function injectExtensions() {
         if (extensions[extension]["isDir"] !== true) {
             continue
         }
+        EXTENSION_STATUSES[extension] = false
         let extensionContents = await window.pythonPipelineAPI.interactWithPythonPipeline(
             {
                 "object": "get_files",
@@ -201,6 +174,7 @@ async function injectExtensions() {
 
 function disableExtension(name) {
     console.log("Disabled extension " + name)
+    EXTENSION_STATUSES[name] = false
     EXTENSION_RESOURCE_HOLDER[name].assets.forEach(asset => {
         if (document.head.contains(asset)) {
             document.head.removeChild(asset)
@@ -214,13 +188,43 @@ function disableExtension(name) {
 
 function enableExtension(name) {
     console.log("Enabled extension " + name)
+    EXTENSION_STATUSES[name] = true
     EXTENSION_RESOURCE_HOLDER[name].assets.forEach(asset => {
         if (asset.nodeName === 'LINK') {
             document.head.appendChild(asset)
         } else if (asset.nodeName === 'SCRIPT') {
+            if (asset.src && !asset.dataset.loaded) {
+                let loadPromise = new Promise(resolve => {
+                    let settle = () => {
+                        asset.dataset.loaded = "true"
+                        resolve()
+                    }
+                    asset.addEventListener('load', settle, { once: true })
+                    asset.addEventListener('error', () => {
+                        console.warn("[extension] script failed to load:", asset.src)
+                        settle()
+                    }, { once: true })
+                })
+                _pendingExtensionScriptLoads.push(loadPromise)
+            }
             document.body.appendChild(asset)
         }
     })
+}
+
+async function whenExtensionsReady() {
+    let pending = _pendingExtensionScriptLoads.slice()
+    _pendingExtensionScriptLoads.length = 0
+    if (pending.length === 0) return
+    await Promise.all(pending)
+    while (true) {
+        let result = true;
+        Object.values(LOADED_SCRIPTS).forEach((script) => {
+            result = result && script
+        })
+        if (result === true) break;
+        await window.sleep(100)
+    }
 }
 
 function notify(message, time = 2500) {
@@ -408,10 +412,10 @@ async function main() {
                 }
             }
 
-            EXTENSION_RELATED_SNIPPETS[extension].forEach((critem) => {
+            window.EXTENSION_RELATED_SNIPPETS[extension].forEach((critem) => {
                 critem.classList.toggle("NOTSAFE")
-                if (!document.body.contains(critem)) EXTENSION_RELATED_SNIPPETS[extension].splice(
-                    EXTENSION_RELATED_SNIPPETS[extension].indexOf(critem), 1
+                if (!document.body.contains(critem)) window.EXTENSION_RELATED_SNIPPETS[extension].splice(
+                    window.EXTENSION_RELATED_SNIPPETS[extension].indexOf(critem), 1
                 )
             })
         }
@@ -449,18 +453,20 @@ async function main() {
             newOuterBox.appendChild(idfiedContainer)
         }
 
-        EXTENSION_RELATED_SNIPPETS[extension] = []
+        window.EXTENSION_RELATED_SNIPPETS[extension] = []
 
         for (let snippet of Object.keys(EXTENSION_RESOURCE_HOLDER[extension]["snippets"])) {
             let snippetCallback = () => {
+                console.log(window.IS_SNAPPING, window.IS_EDITING)
+
                 let needEditSwitch = false;
-                if (window.IS_EDITING) {
+                if (window.IS_EDITING === true) {
                     window.switch_editing()
                     needEditSwitch = true;
                 }
 
                 let needSnapSwitch = false;
-                if (window.IS_SNAPPING) {
+                if (window.IS_SNAPPING === true) {
                     window.switch_docking()
                     needSnapSwitch = true;
                 }
@@ -475,7 +481,7 @@ async function main() {
                     window.updateResizeable(snippetContainer.lastElementChild)
                 }
 
-                EXTENSION_RELATED_SNIPPETS[extension].push(snippetContainer.lastElementChild)
+                window.EXTENSION_RELATED_SNIPPETS[extension].push(snippetContainer.lastElementChild)
 
                 let snapshot = idDupeObs.takeRecords()
                 for (const mutation of snapshot) {
@@ -501,6 +507,30 @@ async function main() {
                 }
                 if (needSnapSwitch) {
                     window.switch_docking()
+                }
+
+                if (window.IS_EDITING) {
+                    snippetContainer.lastElementChild.classList.add("editing");
+                    snippetContainer.lastElementChild.classList.remove("not-editing");
+                    snippetContainer.lastElementChild.classList.add("FaintDivBorder");
+                    snippetContainer.lastElementChild.classList.remove("RemNormalBorderPadding");
+                } else {
+                    snippetContainer.lastElementChild.classList.add("not-editing");
+                    snippetContainer.lastElementChild.classList.remove("editing");
+                    snippetContainer.lastElementChild.classList.remove("FaintDivBorder");
+                    snippetContainer.lastElementChild.classList.add("RemNormalBorderPadding");
+                }
+
+                if (window.IS_SNAPPING) {
+                    snippetContainer.lastElementChild.classList.add("Docking");
+                    snippetContainer.lastElementChild.classList.remove("not-Docking");
+                    snippetContainer.lastElementChild.classList.add("Dockable");
+                    snippetContainer.lastElementChild.classList.remove("not-Dockable");
+                } else {
+                    snippetContainer.lastElementChild.classList.add("not-Docking");
+                    snippetContainer.lastElementChild.classList.remove("Docking");
+                    snippetContainer.lastElementChild.classList.add("not-Dockable");
+                    snippetContainer.lastElementChild.classList.remove("Dockable");
                 }
             }
 
@@ -537,12 +567,161 @@ async function main() {
 
     }
 
-    await end_extra_load()
+    window.EXTENSIONS_INJECTED = true
 }
 
-window.notify = notify
+function genericSetter(what, value) {
+    eval(what+" = "+JSON.stringify(value))
+}
 
-main()
+async function initializeStateManager(script_id, generic_setter=genericSetter) {
+    LOADED_SCRIPTS[script_id] = false;
+    if (window.startupState && LOADED_LAYOUT) {
+        if (Object.keys(window.startupState).length > 0 && window.startupState[script_id]) {
+            Object.keys(window.startupState[script_id]).forEach(key => {
+                try {
+                    generic_setter(key, window.startupState[script_id][key])
+                    console.log("SETUP FOR " + key + " COMPLETED IN " + script_id)
+                } catch (err) {
+                    console.warn("NO ITEM WAS PROVIDED FOR VARIABLE " + key + " OF " + script_id + " STATE MANAGER")
+                    throw err;
+                }
+            })
+        }
+    } else if (!LOADED_LAYOUT) {
+        let sigma = {}.hasOwnProperty()
+        let res = await window.pythonPipelineAPI.interactWithPythonPipeline(
+            {
+                "object": "load_lastest_layout",
+                "args": [],
+                "kwargs": {}
+            }
+        )
+        let settings = await window.pythonPipelineAPI.interactWithPythonPipeline({
+            "object": "pass_current_settings",
+            "args": [],
+            "kwargs": {}
+        })
+
+        let extension_map = {}
+        let all_ext_containers;
+        if (window.EXTENSIONS_INJECTED === false) {
+            await main()
+        }
+        all_ext_containers = document.querySelectorAll('[id^="extension-choosing-"]')
+        let all_chosen_containers = []
+        all_ext_containers.forEach(ext => {
+            if (ext.id.split("-").length !== 4) return
+            all_chosen_containers.push(ext)
+        })
+        console.log(all_chosen_containers)
+        all_chosen_containers.forEach(inp => {
+            console.log(Object.keys(settings["EXTENSIONS"]), inp.id.split("-")[3])
+            if (Object.keys(settings["EXTENSIONS"]).includes(inp.id.split("-")[3]) === false) {return;}
+            if (settings["EXTENSIONS"][inp.id.split("-")[3]] !== true) {return;}
+            inp.click(); console.log("CLICKED", inp)
+        })
+
+        window.startupState = res["JS_STATES"]
+        LOADED_LAYOUT = true;
+
+        let main_container = document.getElementById("viewport-resize-container")
+
+        await whenExtensionsReady()
+
+        let creationHelper = (chunk) => {
+            console.log(window.IS_SNAPPING, window.IS_EDITING)
+            let needEditSwitch = false;
+            if (window.IS_EDITING === true) {
+                window.switch_editing()
+                needEditSwitch = true;
+            }
+
+            let needSnapSwitch = false;
+            if (window.IS_SNAPPING === true) {
+                window.switch_docking()
+                needSnapSwitch = true;
+            }
+
+            main_container.appendChild(chunk)
+            if (chunk.classList.contains("DraggableDiv")) {
+                window.updateDraggable(chunk)
+            }
+            if (chunk.classList.contains("ResizeableDiv")) {
+                window.updateResizeable(chunk)
+            }
+
+            try {
+                window.EXTENSION_RELATED_SNIPPETS[chunk.getAttribute("itemext").split("-")[0]].push(chunk)
+            } catch {
+                console.log("AN ERROR OCURED WHEN RUNNING THROUGH ITEMEXT NAME, LOWERING ALL LETTERS FOR BETTER CHECK")
+                let temp_related_snippets = {}
+                Object.keys(window.EXTENSION_RELATED_SNIPPETS).forEach(key => {
+                    temp_related_snippets[key.toLowerCase()] = key
+                })
+                console.log("NEW MAPPING CREATED:", temp_related_snippets)
+                window.EXTENSION_RELATED_SNIPPETS[temp_related_snippets[chunk.getAttribute("itemext").split("-")[0]]].push(chunk)
+            }
+
+            let res = checkDupedId(chunk)
+            let is_removed = false;
+            if (res === true) {
+                is_removed = true
+                notify("Cannot create this Element! Id already matches!")
+                chunk.remove()
+            }
+
+            console.log(window.EXTENSION_SNIPPET_STARTUP_MUTATION_CALLBACKS)
+            if (is_removed === false) {
+                console.log("RUNNING CUSTOM CALLBACKS",window.EXTENSION_SNIPPET_STARTUP_MUTATION_CALLBACKS.length)
+                window.EXTENSION_SNIPPET_STARTUP_MUTATION_CALLBACKS.forEach(
+                    fn => {fn([{ addedNodes: [chunk] }])}
+                )
+            }
+
+            if (needEditSwitch === true) {
+                window.switch_editing()
+            }
+            if (needSnapSwitch === true) {
+                window.switch_docking()
+            }
+
+            if (window.IS_EDITING) {
+                chunk.classList.add("editing");
+                chunk.classList.remove("not-editing");
+                chunk.classList.add("FaintDivBorder");
+                chunk.classList.remove("RemNormalBorderPadding");
+            } else {
+                chunk.classList.add("not-editing");
+                chunk.classList.remove("editing");
+                chunk.classList.remove("FaintDivBorder");
+                chunk.classList.add("RemNormalBorderPadding");
+            }
+
+            if (window.IS_SNAPPING) {
+                chunk.classList.add("Docking");
+                chunk.classList.remove("not-Docking");
+                chunk.classList.add("Dockable");
+                chunk.classList.remove("not-Dockable");
+            } else {
+                chunk.classList.add("not-Docking");
+                chunk.classList.remove("Docking");
+                chunk.classList.add("not-Dockable");
+                chunk.classList.remove("Dockable");
+            }
+        }
+
+        let temp_container = document.createElement("div")
+        temp_container.innerHTML = res["HTML_PART"]
+        Array.from(temp_container.children).forEach(child => creationHelper(child))
+
+        await end_extra_load()
+        initializeStateManager(script_id, generic_setter)
+    }
+}
+window.initializeStateManager = initializeStateManager
+
+window.notify = notify
 
 function checkDupedId(item) {
     let check = (layer) => {
@@ -557,6 +736,8 @@ function checkDupedId(item) {
     }
     return check(item)
 }
+
+window.checkDupedId = checkDupedId
 
 const idDupeObs = new MutationObserver(() => {})
 idDupeObs.observe(document.body, { childList: true, subtree: true })

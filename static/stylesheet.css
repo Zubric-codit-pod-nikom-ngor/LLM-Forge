@@ -435,6 +435,21 @@
     to { --AuroraRim-b: 360deg; }
 }
 
+.GridBackground {}
+.GridBackground::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: linear-gradient(to right, #4A4A4A 1px, transparent 1px),
+    linear-gradient(to bottom, #4A4A4A 1px, transparent 1px) !important;
+    background-size: 20px 20px !important;
+    background-repeat: repeat !important;
+    opacity: 0.25;
+}
+
 @media (prefers-reduced-motion: reduce) {
     .AuroraRim, .AuroraRim *, .AuroraRim::before, .AuroraRim::after, .AuroraRim *::before, .AuroraRim *::after {
         animation-duration: 0.01ms !important;

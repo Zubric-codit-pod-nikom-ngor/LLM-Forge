@@ -1,5 +1,5 @@
 let LAST_QUICK_CALL_TIME = Date.now()
-const QUICK_CALL_GAP = 150
+let QUICK_CALL_GAP = 150
 let QUICK_CALL_GEN = 0
 
 let StarCounter = 0
@@ -17,17 +17,19 @@ window.extendSnapshotStates(() => {
         "LAST_QUICK_CALL_TIME": LAST_QUICK_CALL_TIME,
         "QUICK_CALL_GAP": QUICK_CALL_GAP,
         "QUICK_CALL_GEN": QUICK_CALL_GEN,
-        "StarCounter": StarCounter
+        "StarCounter": StarCounter,
+        "window.favorites": window.favorites,
     }
 }, "core-main")
 window.initializeStateManager("core-main")
 
 
-async function quickSearch() {
+async function quickSearch(extra_query) {
     const myGeneration = ++QUICK_CALL_GEN
 
     const container = document.getElementById("search-suggestions")
     let query = document.getElementById("model-search").value
+    if (extra_query) query = extra_query;
     if (query === "") {
         container.innerHTML = ""
         return;
@@ -431,15 +433,9 @@ function areEqual(arr1, arr2) {
     return true;
 }
 
-async function setupModel(item, node) {
-    console.log(item);
-    node.children[0].innerHTML = "";
-
-
-}
-
 window.EXTENSION_SNIPPET_STARTUP_MUTATION_CALLBACKS.push(
     (mutations) => {
+        console.log("RUNNING A MUTATION SCAN!")
         for (let mutation of mutations) {
             if (mutation.addedNodes.length === 0) return
             mutation.addedNodes.forEach(node => {
@@ -453,12 +449,10 @@ window.EXTENSION_SNIPPET_STARTUP_MUTATION_CALLBACKS.push(
                     })
                 }
                 if (node.getAttribute("itemext") === "core-modelInfo") {
+                    console.log(node)
                     let card = document.getElementById("core-modelInfo-cardRender")
                     let target = document.getElementById("core-modelInfo-entry")
-
                     let star = document.getElementById("core-modelInfo-star").parentElement.children[0]
-                    document.getElementById("core-modelInfo-star").id ="core-modelInfo-star-"+StarCounter
-                    StarCounter++
 
                     card.children[1].onclick = async () => {
                         star.parentElement.children[0].classList.toggle("active")
@@ -476,18 +470,18 @@ window.EXTENSION_SNIPPET_STARTUP_MUTATION_CALLBACKS.push(
                             window.favorites.push(star.getAttribute('currentJob'))
                         } else {
                             let id = window.favorites.indexOf(
-                            star.getAttribute('currentJob'))
+                                star.getAttribute('currentJob'))
                             if (window.favorites.includes(star.getAttribute('currentJob')) && id > -1) {
                                 window.favorites.splice(id,
-                                1)
+                                    1)
                             }
                         }
                         console.log(window.favorites)
                         window.bounceWhenClicked(star)
                     }
-
-                    card.id = null
                     target.parentElement.removeChild(card)
+
+                    console.log("TARGET LOCKED", target)
 
                     target.addEventListener("dragenter", () => {
                         target.firstElementChild.classList.add("AuroraRim-rim")
@@ -519,8 +513,6 @@ window.EXTENSION_SNIPPET_STARTUP_MUTATION_CALLBACKS.push(
                         target.firstElementChild.style.opacity = "0"
                         dragPull(e.dataTransfer.getData('text/plain'), card.lastElementChild, star);
                     })
-
-                    target.id = null
                 }
                 if (node.getAttribute("itemext") === "core-favoriteModels") {
                     let container = document.getElementById("core-favoriteModels-container")
@@ -733,3 +725,22 @@ window.EXTENSION_SNIPPET_STARTUP_MUTATION_CALLBACKS.push(
         }
     }
 )
+window.EXTENSION_SNIPPET_UNLOAD_MUTATION_CALLBACKS.push((item) => {
+    console.log("ENDING SEQUNCE RUNNING")
+    if (item.getAttribute("itemext") === 'core-modelSearch') {
+        quickSearch("")
+        document.getElementById("search-suggestions").innerHTML = ""
+    }
+    if (item.getAttribute("itemext") === 'core-modelInfo') {
+        let newNode = document.createElement("div")
+        newNode.innerHTML = window.EXTENSION_RESOURCE_HOLDER["Core"]["snippets"]["modelInfo"]
+        item.innerHTML = newNode.children[0].innerHTML;
+    }
+    if (item.getAttribute("itemext") === 'core-favoriteModels') {
+        let newNode = document.createElement("div")
+        newNode.innerHTML = window.EXTENSION_RESOURCE_HOLDER["Core"]["snippets"]["favoriteModels"]
+        item.innerHTML = newNode.children[0].innerHTML;
+    }
+})
+
+window.isFullyLoaded("core-main")

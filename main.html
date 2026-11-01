@@ -28,7 +28,7 @@
     <div class="Center"
          style="box-shadow: black 0 0 100px; width: calc(100% - 50px); height: calc(100% - 50px); background: rgb(62, 62, 62); border-radius: 12px; overflow: hidden; z-index: 2">
         <div class="BorderHoverGlow Center" style="z-index: 2"></div>
-        <div class="DarkDiv Center" id="viewport-resize-container"
+        <div class="DarkDiv Center GridBackground" id="viewport-resize-container"
              style="overflow: hidden; width: calc(100% - 8px); height: calc(100% - 8px); z-index: 3; border: transparent; background: linear-gradient(-135deg, #1F1F1F, #080808)">
 
             <div class="not-Dockable NonResizeableViaViewport" style="background: red; width: 20px; height: 20px; position: absolute; top: -22px; left: -22px"></div>
@@ -86,8 +86,9 @@
     <div id="blur-layer" class="Center" style="will-change: backdrop-filter; transition: all 0.5s; pointer-events: none; width: 100%; height: 100%; z-index: 996; backdrop-filter: blur(120px); background-color: rgba(255, 255, 255, 0.01)"></div>
     <div id="context-menu" class="CustomScrollbar ListedArrows" style="opacity: 0; overflow: hidden; padding: 10px; max-height: 50%; max-width: 75%; box-shadow: #1F1F1F 0 0 30px; transition: height 0.25s ease-in-out, width 0.25s ease-in-out, opacity 0.25s ease-in-out; border-style: solid; border-radius: 10px; border-width: 2px; border-color: #ff4400; position: absolute; background-color: rgba(80, 80, 80, 0.25); backdrop-filter: blur(12px); width: fit-content; height: 0; z-index: 994"></div>
 
-    <script src="./static/design-related.js"></script>
     <script src="./static/extension-related.js"></script>
+
+    <script src="./static/design-related.js"></script>
 
     <script type="module">
         console.log(window.pythonPipelineAPI)
