@@ -32,7 +32,7 @@ and other custom classes added by your scripts + other cool stuff will be set th
 1) all functions and stuff are stored / completed in them
 2) they are always in .js files (intuitively)
 3) just make them not break any other stuff :)
-4) context menu stuff are added through
+4) context menu stuff are added through this:
     ```js
     // on window.CUSTOM_CONTEXT_OPS you add all the custom operations.
     // you can add all your custom operations as shown in the example:
