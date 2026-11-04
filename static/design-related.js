@@ -1281,7 +1281,7 @@ addEventListener("contextmenu", async (e) => {
                 label.style.margin = "0";
 
                 let container = wrap_listed(label)
-                container.onclick = item[1]
+                container.onclick = () => item[1](actual_target)
                 container.style.marginRight = "24px"
                 context_menu.appendChild(container)
             })
