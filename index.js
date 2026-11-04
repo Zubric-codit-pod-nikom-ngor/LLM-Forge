@@ -4,6 +4,10 @@ const pipeline = require("./static/python-pipeline")
 
 app.commandLine.appendSwitch('js-flags', '--max-old-space-size=4096');
 
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 async function createWindow() {
     pipeline.connectToPythonPipeline()
     let settings = await pipeline.interactWithPythonPipeline({
@@ -30,28 +34,43 @@ async function createWindow() {
     if (settings["UI"]["MAXIMIZED"] === true) {
         win.maximize()
     }
-    win.on("close", async (e) => {
+
+    let close_callback = async (e) => {
+        e.preventDefault();
+        win.hide();
+        win.loadURL('about:blank');
+        await sleep(2000)
         pipeline.connectToPythonPipeline()
         let isMaximized = win.isMaximized()
         let [width, height] = win.getSize()
-        pipeline.interactWithPythonPipeline({
+        await pipeline.interactWithPythonPipeline({
             "object": "update_ui_setting",
             "args": ["WINDOW_WIDTH", width],
             "kwargs": {}
         });
-        pipeline.interactWithPythonPipeline({
+        await pipeline.interactWithPythonPipeline({
             "object": "update_ui_setting",
             "args": ["WINDOW_HEIGHT", height],
             "kwargs": {}
         });
-        pipeline.interactWithPythonPipeline({
+        await pipeline.interactWithPythonPipeline({
             "object": "update_ui_setting",
             "args": ["MAXIMIZED", isMaximized],
             "kwargs": {}
         });
+        await pipeline.interactWithPythonPipeline({
+            "object": "save_settings",
+            "args": [],
+            "kwargs": {}
+        });
         pipeline.wipePythonPipeline();
         console.log(width, height, isMaximized);
-    })
+
+        win.off("close", close_callback);
+        win.destroy();
+    }
+
+    win.on("close", close_callback)
 
     win.show()
 

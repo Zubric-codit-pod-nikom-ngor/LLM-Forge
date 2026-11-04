@@ -33,7 +33,9 @@ function preserveJSState() {
     return state
 }
 
-let sigmaUnload = async (e) => {
+let unload = async (e) => {
+
+    e.preventDefault();
 
     start_extra_load()
 
@@ -89,23 +91,29 @@ let sigmaUnload = async (e) => {
     ]
 
     argstates.forEach(async (argstate) => {
-        window.pythonPipelineAPI.interactWithPythonPipeline({
+        await window.pythonPipelineAPI.interactWithPythonPipeline({
             "object": "update_ui_setting",
             "args": argstate,
             "kwargs": {}
         })
     })
 
-    window.pythonPipelineAPI.interactWithPythonPipeline({
+    await window.pythonPipelineAPI.interactWithPythonPipeline({
         "object": "update_setting",
         "args": ["EXTENSIONS", EXTENSION_STATUSES],
         "kwargs": {}
     })
 
-    end_extra_load()
+    await window.pythonPipelineAPI.interactWithPythonPipeline({
+        "object": "save_settings",
+        "args": [],
+        "kwargs": {}
+    });
+
+    await sleep(2000)
 }
 
-window.addEventListener("beforeunload", sigmaUnload)
+window.addEventListener("beforeunload", unload)
 
 let _pendingExtensionScriptLoads = []
 
@@ -712,6 +720,10 @@ async function initializeStateManager(script_id, generic_setter=genericSetter) {
         let temp_container = document.createElement("div")
         temp_container.innerHTML = res["HTML_PART"]
         Array.from(temp_container.children).forEach(child => creationHelper(child))
+
+        // if (window.startupState["MAINPACKAGE-DESIGN_RELATED"]["IS_SUPPORTING_VIEWPORT_RESIZE"] === true) {
+        //     window.resolveLayout()
+        // }
 
         await end_extra_load()
         initializeStateManager(script_id, generic_setter)

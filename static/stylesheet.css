@@ -176,7 +176,7 @@
 }
 .RemNormalBorderPadding {
     padding: -12px;
-    border-width: 2px; !important;
+    border-width: 3px; !important;
     border-style: solid; !important;
     border-image: unset; !important;
     border-color: #3c3c3c; !important;
@@ -439,13 +439,13 @@
 .GridBackground::before {
     content: "";
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+    top: -15px;
+    left: -15px;
+    width: calc(100% + 12px);
+    height: calc(100% + 12px);
     background-image: linear-gradient(to right, #4A4A4A 1px, transparent 1px),
     linear-gradient(to bottom, #4A4A4A 1px, transparent 1px) !important;
-    background-size: 20px 20px !important;
+    background-size: 24px 24px !important;
     background-repeat: repeat !important;
     opacity: 0.25;
 }

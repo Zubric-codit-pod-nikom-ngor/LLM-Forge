@@ -54,16 +54,15 @@ def pass_current_settings(): return settings
 
 def update_setting(path, value):
     settings[path] = value
+    return settings
+
+def save_settings():
     backed_up_path.mkdir(exist_ok=True)
     with open(backed_up_path / "settings.json", "w") as file:
         json.dump(settings, file, indent=4)
-    return settings
 
 def update_ui_setting(path, value):
     settings["UI"][path] = value
-    backed_up_path.mkdir(exist_ok=True)
-    with open(backed_up_path / "settings.json", "w") as file:
-        json.dump(settings, file, indent=4)
     return settings
 
 def get_path_map():

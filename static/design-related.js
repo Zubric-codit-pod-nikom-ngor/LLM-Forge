@@ -6,8 +6,6 @@ Array.prototype.min = function() {
     return Math.min.apply(null, this);
 };
 
-
-
 const all_hover_glowing = document.querySelectorAll(".BorderHoverGlow")
 document.body.addEventListener("mousemove", (ev) => {
     all_hover_glowing.forEach((item) => {
@@ -24,16 +22,12 @@ document.body.addEventListener("mousemove", (ev) => {
     })
 })
 
-
-
 const D = 0.5;
 
 var task_keys = {
     "always_true": true,
     "always_false": false,
 }
-
-
 
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -1165,6 +1159,8 @@ if (MAIN_CONTAINER) {
         resolveLayout();
     }).observe(MAIN_CONTAINER);
 }
+
+window.resolveLayout = resolveLayout;
 
 
 
