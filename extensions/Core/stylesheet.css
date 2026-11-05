@@ -33,3 +33,34 @@
     }
     fill: #ff9900 !important;
 }
+
+.ChatHeader {
+    & div.active {
+        background: #2e2e2e;
+        border-radius: 10px;
+        border-bottom-right-radius: 0;
+        border-bottom-left-radius: 0;
+        height: 100%;
+        width: fit-content;
+        margin-top: 0;
+        margin-bottom: 0;
+        padding: 10px;
+        color: #ff9900
+    }
+    & div {
+        background: #424242;
+        border-radius: 7px;
+        padding: 5px;
+        margin: 5px;
+        height: calc(100% - 10px);
+        width: fit-content;
+        color: white;
+        cursor: pointer;
+        transition: all 0.25s ease-in-out;
+        font-size: 100%;
+        line-height: 100%;
+        white-space: nowrap;
+        text-align: center;
+        vertical-align: center;
+    }
+}
