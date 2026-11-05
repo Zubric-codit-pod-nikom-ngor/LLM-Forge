@@ -65,6 +65,16 @@ and other custom classes added by your scripts + other cool stuff will be set th
     ```js
     window.isFullyLoaded("PLACEHOLDER") // still the same custom script id from before.
     ```
+6) optional setup callbacks for your snippets are set through this:
+    ```js
+    window.EXTENSION_SNIPPET_STARTUP_MUTATION_CALLBACKS.push(
+        (m) => {} // this runs when ANY snippet is added, (including the load sequence) the input is always a result of a normal MutationObserver.
+    )
+   
+    window.EXTENSION_SNIPPET_UNLOAD_MUTATION_CALLBACKS.push(
+        (item) => {} // this ALWAYS runs when saving the layout, the argument will take every single added snippet one by one, prep everything here before unloading.
+    )
+    ```
    
 #### Stylesheets *(**.css** files)*:
 There are no restrictions, as long as they do not break anything :)
