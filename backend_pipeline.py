@@ -522,7 +522,7 @@ def prepare_chat_with_downloaded_model(
     context            : Iterable = None,
     deep_thinking      : bool     = False,
     token_limits       : int      = 100,
-    temperature        : float    = 1,
+    temperature        : float    = 0.75,
     top_p              : float    = 0.9,
     repetition_penalty : float    = 1.05,
     chat_template      : str      = None
@@ -563,20 +563,23 @@ def prepare_chat_with_downloaded_model(
     return model
 
 
-model_id = "Qwen/Qwen2.5-0.5B-Instruct"
-# model_id = "deepseek-ai/DeepSeek-OCR-2"
-# model = prepare_chat_with_downloaded_model("./backed_up", deep_thinking=True)
-# download_hf_model(model_id, "./backed_up")
-# model = load_downloaded_model("./backed_up")
+# model_id = "Qwen/Qwen2.5-0.5B-Instruct"
+# # model_id = "deepseek-ai/DeepSeek-OCR-2"
+# model = prepare_chat_with_downloaded_model(
+#     "./backed_up/essential/models/qwen",
+#     temperature=0.3
+# )
+# # download_hf_model(model_id, "./backed_up/essential/models/qwen")
+# # model = load_downloaded_model("./backed_up")
 # model.token_limits = 1024
-
+#
 # print(
 #     "think" in model.tokenizer.chat_template or \
 #     "enable_thinking" in model.tokenizer.chat_template
 # )
 # model.file_up(
 #     MessageFields().generic_user_message(
-#         "Can you please teach me pressure in physics?"
+#         "Привет!",
 #     )
 # )
 #

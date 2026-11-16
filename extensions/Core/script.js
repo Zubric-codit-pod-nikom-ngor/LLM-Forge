@@ -725,6 +725,7 @@ window.EXTENSION_SNIPPET_STARTUP_MUTATION_CALLBACKS.push(
         }
     }
 )
+
 window.EXTENSION_SNIPPET_UNLOAD_MUTATION_CALLBACKS.push((item) => {
     console.log("ENDING SEQUNCE RUNNING")
     if (item.getAttribute("itemext") === 'core-modelSearch') {
