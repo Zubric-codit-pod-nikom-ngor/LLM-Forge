@@ -24,6 +24,7 @@ window.extendSnapshotStates(() => {
 window.initializeStateManager("core-main")
 
 
+
 async function quickSearch(extra_query) {
     const myGeneration = ++QUICK_CALL_GEN
 
