@@ -369,32 +369,27 @@ class InferenceChat:
 
 class LoadedModelChat:
 
-    def __init__(self, tokenizer, model, token_limits=100, temperature=1, top_p=0.9, repetition_penalty=1.05, chat_template=None):
+    def __init__(self, tokenizer, model, token_limits=100, temperature=1, top_p=0.9, repetition_penalty=1.05, chat_template=None, think_tokens=100, can_think=False):
         self.tokenizer = tokenizer
         self.model = model
         self.messages = []
         self.name = ""
         self.token_limits = token_limits
+        self.think_tokens = think_tokens
         self.temperature = temperature
         self.top_p = top_p
         self.repetition_penalty = repetition_penalty
         self.chat_template = chat_template
-        self.enable_thinking = False
+        self.enable_thinking = False,
+        self.can_think = can_think
 
     def file_up(self, message, depth=0):
         self.messages.append(
             message
         )
 
-        try:
-            prompt = self.tokenizer.apply_chat_template(
-                self.messages,
-                tokenize=False,
-                add_generation_prompt=True
-            )
-        except ValueError:
-            if not self.tokenizer.chat_template:
-                self.tokenizer.chat_template = """
+        if not self.tokenizer.chat_template:
+            self.tokenizer.chat_template = """
 {% for message in messages %}
   {% if message['role'] == 'user' %}
     {{ '<bos><user>' + message['content'].strip() + '<bot>' }}
@@ -402,48 +397,64 @@ class LoadedModelChat:
     {{ message['content'].strip() + '<eos>' }}
   {% endif %}
 {% endfor %}
-""" if not self.chat_template else self.chat_template
-            prompt = self.tokenizer.apply_chat_template(
-                self.messages,
-                tokenize=False,
-                add_generation_prompt=True,
-                enable_thinking=self.enable_thinking
-            )
+        """ if not self.chat_template else self.chat_template
+
+        prompt = self.tokenizer.apply_chat_template(
+            self.messages,
+            tokenize=False,
+            add_generation_prompt=True,
+            enable_thinking=self.enable_thinking
+        )
+
+        if self.enable_thinking and not self.can_think:
+            prompt+="<think>Here i will write my thinking process. Here it goes: "
 
         inputs = self.tokenizer(
             [prompt], return_tensors="pt"
         ).to(self.model.device)
 
-        if self.token_limits - inputs["input_ids"].shape[-1] <= 0:
-            print(f"EXCEEDING DEPTH {depth}, DOUBLING TOKEN LIMITS TO {self.token_limits * 2}")
-            self.token_limits *= 2
-            self.messages.pop(-1)
-            self.file_up(message, depth=depth + 1)
-
-        try:
+        if self.enable_thinking and not self.can_think:
             with torch.no_grad():
-                ids = self.model.generate(
+                think_generated = self.model.generate(
                     **inputs,
-                    max_new_tokens = self.token_limits - inputs["input_ids"].shape[-1],
+                    max_new_tokens=self.think_tokens+inputs["input_ids"].shape[-1],
                     temperature=self.temperature,
                     top_p=self.top_p, repetition_penalty=self.repetition_penalty,
                     pad_token_id=self.tokenizer.eos_token_id,
                     eos_token_id=self.tokenizer.eos_token_id,
+                    stop_strings=["</think>"],
+                    tokenizer=self.tokenizer
                 )
-        except IndexError:
-            print(f"EXCEEDING DEPTH {depth}, DOUBLING TOKEN LIMITS TO {self.token_limits*2}")
-            self.token_limits*=2
-            self.messages.pop(-1)
-            self.file_up(message, depth=depth+1)
+                think_generated_text = self.tokenizer.decode(think_generated[0], skip_special_tokens=False)
+
+                if "</think>" not in think_generated_text[think_generated_text.find("</think>")+10:]: think_generated_text+='\n</think>\n'
+                think_generated_text+="\nAnd now i will give the answer to the user acording to my latest thoughts:\n"
+                inputs = self.tokenizer(think_generated_text, return_tensors="pt").to(self.model.device)
+                print(think_generated_text)
+                print("-"*50)
+
+        with torch.no_grad():
+            ids = self.model.generate(
+                **inputs,
+                max_new_tokens = self.token_limits+inputs["input_ids"].shape[-1],
+                temperature=self.temperature,
+                top_p=self.top_p, repetition_penalty=self.repetition_penalty,
+                pad_token_id=self.tokenizer.eos_token_id,
+                eos_token_id=self.tokenizer.eos_token_id,
+                tokenizer=self.tokenizer
+            )
 
         prompt_length = inputs.input_ids.shape[-1]
         response_tokens = ids[0][prompt_length:]
 
-        response = self.tokenizer.decode(response_tokens, skip_special_tokens=False)
+        response = self.tokenizer.decode(response_tokens, skip_special_tokens=True)
+        extras=""
+        if self.enable_thinking and not self.can_think:
+            extras=think_generated_text[think_generated_text.rfind("<think>"):think_generated_text.rfind("</think>")+8]+"\n"
 
         self.messages.append(
             MessageFields().generic_assistant_answer_response(
-                response
+                extras+response
             )
         )
 
@@ -517,15 +528,23 @@ def load_downloaded_model(model_path):
         tokenizer=tokenizer,
     )
 
+class ThinkingType:
+    LOW = 1
+    MEDIUM = 2
+    HIGH = 3
+    MAX = 4
+
 def prepare_chat_with_downloaded_model(
     model_path,
-    context            : Iterable = None,
-    deep_thinking      : bool     = False,
-    token_limits       : int      = 100,
-    temperature        : float    = 0.75,
-    top_p              : float    = 0.9,
-    repetition_penalty : float    = 1.05,
-    chat_template      : str      = None
+    context            : Iterable       = None,
+    deep_thinking      : bool           = False,
+    token_limits       : int            = 100,
+    thinking_tokens    : int            = 100,
+    temperature        : float          = 0.75,
+    top_p              : float          = 0.9,
+    repetition_penalty : float          = 1.05,
+    chat_template      : str            = None,
+    thinking_type      : int | NoneType = ThinkingType.LOW
 ):
 
     model = load_downloaded_model(model_path)
@@ -553,37 +572,62 @@ def prepare_chat_with_downloaded_model(
                 )
 
     if deep_thinking:
+        can_think = "think" in model.tokenizer.chat_template or \
+        "enable_thinking" in model.tokenizer.chat_template
+        model.think_tokens = thinking_tokens
         model.enable_thinking = deep_thinking
-        model.messages.append(
-            message_fields.generic_context_setting_message(
-                "<|think|>"
+        model.can_think = can_think
+        if not can_think and thinking_type:
+
+            # special_tokens_dict = {"additional_special_tokens": ["<think>", "</think>"]}
+            # num_added_toks = model.tokenizer.add_special_tokens(special_tokens_dict)
+            # model.model.resize_token_embeddings(len(model.tokenizer))
+
+            model.messages.append(
+                MessageFields().generic_context_setting_message(
+                    "Before answering, think"+
+                    " "+("briefly"if thinking_type==ThinkingType.LOW else \
+                    "as much as you think is needed"if thinking_type==ThinkingType.MEDIUM else \
+                    "hard"if thinking_type==ThinkingType.HIGH else "as greatly as you possibly can")+
+                    ", write the thoughts, add <think> tag before your thought process and </think> tag right before the end."+
+                    "\n Just a friendly reminder: this thinking process is just for you: you do not need to "+
+                    "talk to the user, this will be after the thinking process, and you need to just focus on getting the task done."+
+                    " After you're done with thinking, provide your answer right after the </think> tag as the user can't see"+
+                    " your thinking process and will assume that you didn't answer at all. And remember: the contents of the"+
+                    " thinking process is what you should recall for the user, tags are not visible, so just express the contents without the tags!"
+                )
             )
-        )
 
     return model
 
 
 # model_id = "Qwen/Qwen2.5-0.5B-Instruct"
-# # model_id = "deepseek-ai/DeepSeek-OCR-2"
+# # # model_id = "deepseek-ai/DeepSeek-OCR-2"
 # model = prepare_chat_with_downloaded_model(
 #     "./backed_up/essential/models/qwen",
-#     temperature=0.3
+#     temperature=0.3,
+#     deep_thinking=True,
+#     thinking_type=ThinkingType.MAX,
+#     thinking_tokens=1024
 # )
-# # download_hf_model(model_id, "./backed_up/essential/models/qwen")
-# # model = load_downloaded_model("./backed_up")
-# model.token_limits = 1024
+# # # download_hf_model(model_id, "./backed_up/essential/models/qwen")
+# # # model = load_downloaded_model("./backed_up")
+# model.token_limits = 2048
 #
-# print(
-#     "think" in model.tokenizer.chat_template or \
-#     "enable_thinking" in model.tokenizer.chat_template
+# model.messages.append(
+#     MessageFields().generic_context_setting_message(
+#         "Respond like the user is 5 years old: slow and steady."
+#     )
 # )
+#
 # model.file_up(
 #     MessageFields().generic_user_message(
-#         "Привет!",
+#         "Hi! Can you please explain pressure in physics to me?",
 #     )
 # )
 #
 # print(model.discard())
+# # print(model.messages)
 #
 # while True:
 #     model.file_up(

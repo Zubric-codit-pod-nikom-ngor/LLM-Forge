@@ -434,9 +434,73 @@ function areEqual(arr1, arr2) {
     return true;
 }
 
+function choseChat(item, target_holder, message_holder) {
+    if (item.nodeName != "DIV") return
+    for (let node of target_holder.children) {
+        node.classList.remove("active")
+    }
+    item.classList.add("active");
+    message_holder.innerHTML = "";
+}
+
+function messageWrap(role) {
+    let newDiv = document.createElement("div");
+    newDiv.classList.add("ChatMessage");
+    newDiv.classList.add("MDRenderDivStyle")
+
+    let newContainer = document.createElement("div");
+    newContainer.style.width = "100%"
+    newContainer.style.height = "fit-content";
+    newContainer.style.maxWidth = "100%";
+
+    let lowerContainer = document.createElement("div");
+    lowerContainer.style.width = "fit-content";
+    lowerContainer.style.height = "fit-content";
+    lowerContainer.classList.add("PosHorizontally");
+    lowerContainer.style.maxWidth = "100%";
+
+    let newHashtag = document.createElement("div");
+    newHashtag.classList.add("HashtagCard");
+    newHashtag.classList.add("GoogleCodeFont");
+    newHashtag.style.height = "25px"
+    newHashtag.style.fontSize = "14px"
+    newHashtag.style.margin = "5px"
+    newHashtag.style.width = "fit-content";
+    newHashtag.style.fontWeight = "bold"
+
+    newHashtag.textContent = role
+
+    let cval = Math.round(Math.random() * 360 - 1)
+    newHashtag.style.setProperty("--random-color", "hsl(" + cval + ", 65%, 60%)")
+    newHashtag.style.setProperty("--random-color-1", "hsl(" + cval + ", 65%, 45%)")
+    newHashtag.style.color = "hsl(" + cval + ", 65%, 30%)"
+
+    if (role == "user") {
+        lowerContainer.style.float = "right";
+        lowerContainer.appendChild(newHashtag)
+        lowerContainer.appendChild(newDiv)
+    } else if (role == "assistant") {
+        lowerContainer.style.float = "left";
+        lowerContainer.appendChild(newDiv)
+        lowerContainer.appendChild(newHashtag)
+    } else if (["system","tool"].includes(role)) {
+        newDiv.style.border = "3px dashed #ff9900";
+        newDiv.style.backgroundColor = "#694001";
+        newDiv.style.opacity = "0.7";
+        lowerContainer.style.float = "left";
+        lowerContainer.appendChild(newDiv)
+        lowerContainer.appendChild(newHashtag)
+    }
+
+    newDiv.style.marginTop = "5px"
+
+    newContainer.appendChild(lowerContainer)
+
+    return newContainer;
+}
+
 window.EXTENSION_SNIPPET_STARTUP_MUTATION_CALLBACKS.push(
     (mutations) => {
-        console.log("RUNNING A MUTATION SCAN!")
         for (let mutation of mutations) {
             if (mutation.addedNodes.length === 0) return
             mutation.addedNodes.forEach(node => {
@@ -450,7 +514,6 @@ window.EXTENSION_SNIPPET_STARTUP_MUTATION_CALLBACKS.push(
                     })
                 }
                 if (node.getAttribute("itemext") === "core-modelInfo") {
-                    console.log(node)
                     let card = document.getElementById("core-modelInfo-cardRender")
                     let target = document.getElementById("core-modelInfo-entry")
                     let star = document.getElementById("core-modelInfo-star").parentElement.children[0]
@@ -477,12 +540,9 @@ window.EXTENSION_SNIPPET_STARTUP_MUTATION_CALLBACKS.push(
                                     1)
                             }
                         }
-                        console.log(window.favorites)
                         window.bounceWhenClicked(star)
                     }
                     target.parentElement.removeChild(card)
-
-                    console.log("TARGET LOCKED", target)
 
                     target.addEventListener("dragenter", () => {
                         target.firstElementChild.classList.add("AuroraRim-rim")
@@ -538,8 +598,6 @@ window.EXTENSION_SNIPPET_STARTUP_MUTATION_CALLBACKS.push(
                                     "kwargs": {"limit": 1}
                                 }
                             ))[0]
-
-                            console.log(result)
 
                             let newSpan = document.createElement("span");
                             newSpan.style.padding = "0"
@@ -683,52 +741,44 @@ window.EXTENSION_SNIPPET_STARTUP_MUTATION_CALLBACKS.push(
                         }
                     })()
                 }
-                // if (node.getAttribute("itemext") === "core-modelSetup") {
-                //     let card = document.getElementById("core-modelSetup-cardRender")
-                //     let target = document.getElementById("core-modelSetup-entry")
-                //
-                //     target.parentElement.removeChild(card)
-                //
-                //     target.addEventListener("dragenter", () => {
-                //         target.firstElementChild.classList.add("AuroraRim-rim")
-                //         target.classList.add("AuroraRim")
-                //         target.firstElementChild.style.opacity = "1"
-                //     })
-                //
-                //     target.addEventListener("dragleave", () => {
-                //         target.firstElementChild.classList.remove("AuroraRim-rim")
-                //         target.classList.remove("AuroraRim")
-                //         target.firstElementChild.style.opacity = "0"
-                //     })
-                //
-                //     target.addEventListener("dragover", (e) => {
-                //         e.preventDefault();
-                //         target.firstElementChild.classList.add("AuroraRim-rim")
-                //         target.classList.add("AuroraRim")
-                //         target.firstElementChild.style.opacity = "1"
-                //         e.dataTransfer.dropEffect = 'move';
-                //     });
-                //
-                //     target.addEventListener("drop", (e) => {
-                //         if (!Array.from(target.parentElement.childNodes).some(i => i === card)) {
-                //             target.parentElement.appendChild(card)
-                //         }
-                //         e.preventDefault();
-                //         target.firstElementChild.classList.remove("AuroraRim-rim")
-                //         target.classList.remove("AuroraRim")
-                //         target.firstElementChild.style.opacity = "0"
-                //         setupModel(e.dataTransfer.getData('text/plain'), card.lastElementChild);
-                //     })
-                //
-                //     target.id = null
-                // }
+                if (node.getAttribute("itemext") === "core-chatWindow-block") {
+                    let header_container = document.getElementById("core-chatWindow-header-holder")
+                    let message_container = header_container.parentElement.parentElement.lastElementChild.firstElementChild
+                    header_container.id = null
+                    for (let header of header_container.children) {
+                        if (header.nodeName != "DIV") continue
+                        header.onclick = (e) => {
+                            choseChat(header, header_container, message_container)
+                        }
+                    }
+                    header_container.children[header_container.children.length - 1].addEventListener("click", (e) => {
+                        let newdiv = document.createElement("div")
+                        newdiv.textContent = "New Chat"
+                        newdiv.onclick = (e) => {
+                            choseChat(newdiv, header_container, message_container)
+                        }
+                        header_container.lastElementChild.before(newdiv)
+                    })
+
+                    let new_message1 = messageWrap("user")
+                    new_message1.firstElementChild.lastElementChild.style.width = "400px"
+                    new_message1.firstElementChild.lastElementChild.style.height = "200px"
+                    let new_message2 = messageWrap("assistant")
+                    new_message2.firstElementChild.firstElementChild.style.width = "400px"
+                    new_message2.firstElementChild.firstElementChild.style.height = "200px"
+                    let new_message3 = messageWrap("system")
+                    new_message3.firstElementChild.firstElementChild.style.width = "400px"
+                    new_message3.firstElementChild.firstElementChild.style.height = "200px"
+                    message_container.appendChild(new_message1)
+                    message_container.appendChild(new_message2)
+                    message_container.appendChild(new_message3)
+                }
             })
         }
     }
 )
 
 window.EXTENSION_SNIPPET_UNLOAD_MUTATION_CALLBACKS.push((item) => {
-    console.log("ENDING SEQUNCE RUNNING")
     if (item.getAttribute("itemext") === 'core-modelSearch') {
         quickSearch("")
         document.getElementById("search-suggestions").innerHTML = ""
