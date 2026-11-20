@@ -137,6 +137,64 @@ def generate_time_hash():
     hexed = hash_.hexdigest().upper()
     return hexed
 
+def get_instance_vault():
+    return list(model_instance_vault.keys())
+
+def remove_instance(key):
+    traced_key = list(loaded_models_usage_map.keys())[
+        list(loaded_models_usage_map.values()).index(
+            model_instance_vault[key].model
+        )
+    ]; loaded_models_usage_map[traced_key]-=1
+
+    del model_instance_vault[key].model
+    del model_instance_vault[key]
+    if key in model_instance_vault:
+        model_instance_vault.pop(key)
+
+    if loaded_models_usage_map[traced_key] == 0:
+        del loaded_models_vault[traced_key]
+        if traced_key in loaded_models_vault: loaded_models_vault.pop(traced_key)
+        loaded_models_usage_map.pop(traced_key)
+
+    return key in model_instance_vault
+
+def generate_instance(
+    top_p,
+    top_k,
+    do_sample,
+    repetition_penalty,
+    chat_template,
+    thinking_type,
+    token_limits,
+    thinking_tokens,
+    relative_path_map_field: str,
+):
+    if relative_path_map_field in loaded_models_vault.keys():
+        model = loaded_models_vault[relative_path_map_field]
+    else:
+        model = load_downloaded_model(path_map[relative_path_map_field])
+        loaded_models_vault[relative_path_map_field] = model
+    if relative_path_map_field not in loaded_models_usage_map:
+        loaded_models_usage_map[relative_path_map_field] = 0
+    loaded_models_usage_map[relative_path_map_field] += 1
+
+    new_instance = ModelInstance(
+        top_p,
+        top_k,
+        do_sample,
+        repetition_penalty,
+        chat_template,
+        thinking_type,
+        token_limits,
+        thinking_tokens,
+        model
+    )
+
+    new_key = generate_time_hash()
+    model_instance_vault[new_key] = new_instance
+
+    return new_key
 
 
 hf_api = huggingface_hub.HfApi()
@@ -148,6 +206,8 @@ settings: dict = load_settings()
 path_map: dict = get_path_map()
 
 model_instance_vault = {}
+loaded_models_vault = {}
+loaded_models_usage_map = {}
 
 API_KEY = settings["token"]
 huggingface_hub.login(
@@ -508,7 +568,7 @@ class ModelInstance:
         loaded_model: LoadedModelChat,
     ):
         self.top_p = top_p
-        self.top_k = top_k
+        self.top_k = top_k if do_sample else None
         self.do_sample = True if top_k else do_sample
         self.enable_thinking = True if thinking_type else False
         self.thinking_type = thinking_type
