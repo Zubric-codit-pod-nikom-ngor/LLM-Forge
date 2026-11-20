@@ -333,7 +333,6 @@ class MessageFields:
             "content": responce
         }
 
-
 class InferenceChat:
 
     def __init__(self):
@@ -365,7 +364,6 @@ class InferenceChat:
             return self.client.chat.completions.create(
                 self.messages, stream=stream, model=self.client.model
             )
-
 
 class LoadedModelChat:
 
@@ -481,6 +479,33 @@ class LoadedModelChat:
         # TODO
         pass
 
+class ModelInstance:
+    def __init__(
+        self,
+        top_p,
+        top_k,
+        do_sample,
+        repetition_penalty,
+        chat_template,
+        thinking_type,
+        token_limits,
+        thinking_tokens,
+        loaded_model: LoadedModelChat,
+    ):
+        self.top_p = top_p
+        self.top_k = top_k
+        self.do_sample = True if top_k else do_sample
+        self.enable_thinking = True if thinking_type else False
+        self.thinking_type = thinking_type
+        self.thinking_tokens = thinking_tokens
+        self.token_limits = token_limits
+        self.chat_template = chat_template
+        self.repetition_penalty = repetition_penalty
+        self.model = loaded_model
+
+    def __iter__(self):
+        for key,val in vars(self).items():
+            yield key, val
 
 def has_inference(id):
     model_info = hf_api.model_info(id)
@@ -545,13 +570,23 @@ def load_downloaded_model(model_path):
     )
 
 class ThinkingType:
+    NONE = 0
     LOW = 1
     MEDIUM = 2
     HIGH = 3
     MAX = 4
 
+def chat_with_downloaded_model_from_an_instance(
+    instance: ModelInstance,
+    context:  Iterable = None
+):
+    return prepare_chat_with_downloaded_model(
+        **instance,
+        context=context
+    )
+
 def prepare_chat_with_downloaded_model(
-    model_path,
+    model,
     context            : Iterable       = None,
     deep_thinking      : bool           = False,
     token_limits       : int            = 100,
@@ -564,8 +599,6 @@ def prepare_chat_with_downloaded_model(
     chat_template      : str            = None,
     thinking_type      : int | NoneType = ThinkingType.LOW
 ):
-
-    model = load_downloaded_model(model_path)
     model.token_limits = token_limits
     model.temperature = temperature
     model.top_p = top_p
@@ -612,6 +645,15 @@ def prepare_chat_with_downloaded_model(
                     " thinking process is what you should recall for the user, tags are not visible, so just express the contents without the tags!"
                 )
             )
+        elif thinking_type:
+            model.messages.append(
+                MessageFields().generic_context_setting_message(
+                    "Before answering, think" +
+                    " "+("briefly" if thinking_type == ThinkingType.LOW else \
+                    "as much as you think is needed" if thinking_type == ThinkingType.MEDIUM else \
+                    "hard" if thinking_type == ThinkingType.HIGH else "as greatly as you possibly can")+"."
+                )
+            )
 
     return model
 
@@ -625,7 +667,6 @@ def prepare_chat_with_downloaded_model(
 #     thinking_type=ThinkingType.MAX,
 #     thinking_tokens=1024
 # )
-# print(model.tokenizer.vocab_size)
 # # # download_hf_model(model_id, "./backed_up/essential/models/qwen")
 # # # model = load_downloaded_model("./backed_up")
 # model.token_limits = 2048
