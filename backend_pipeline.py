@@ -507,6 +507,15 @@ class ModelInstance:
         for key,val in vars(self).items():
             yield key, val
 
+class ThinkingType:
+    NONE = 0
+    LOW = 1
+    MEDIUM = 2
+    HIGH = 3
+    MAX = 4
+
+
+
 def has_inference(id):
     model_info = hf_api.model_info(id)
     return True if model_info.transformers_info.pipeline_tag else False, model_info.transformers_info.pipeline_tag
@@ -568,13 +577,6 @@ def load_downloaded_model(model_path):
         model=model,
         tokenizer=tokenizer,
     )
-
-class ThinkingType:
-    NONE = 0
-    LOW = 1
-    MEDIUM = 2
-    HIGH = 3
-    MAX = 4
 
 def chat_with_downloaded_model_from_an_instance(
     instance: ModelInstance,
