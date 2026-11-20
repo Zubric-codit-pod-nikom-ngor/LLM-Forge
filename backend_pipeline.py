@@ -369,7 +369,7 @@ class InferenceChat:
 
 class LoadedModelChat:
 
-    def __init__(self, tokenizer, model, token_limits=100, temperature=1, top_p=0.9, repetition_penalty=1.05, chat_template=None, think_tokens=100, can_think=False):
+    def __init__(self, tokenizer, model, token_limits=100, temperature=1, top_p=0.9, repetition_penalty=1.05, chat_template=None, think_tokens=100, can_think=False, top_k=None, do_sample=None):
         self.tokenizer = tokenizer
         self.model = model
         self.messages = []
@@ -382,11 +382,25 @@ class LoadedModelChat:
         self.chat_template = chat_template
         self.enable_thinking = False,
         self.can_think = can_think
+        self.top_k = top_k
+        self.do_sample = do_sample
 
     def file_up(self, message, depth=0):
         self.messages.append(
             message
         )
+
+        extra_unpack = {
+            "do_sample": self.do_sample,
+            "top_k": self.top_k
+        }
+
+        while None in extra_unpack.values():
+            extra_unpack.pop(
+                list(extra_unpack.keys())[
+                    list(extra_unpack.values()).index(None)
+                ]
+            )
 
         if not self.tokenizer.chat_template:
             self.tokenizer.chat_template = """
@@ -423,7 +437,8 @@ class LoadedModelChat:
                     pad_token_id=self.tokenizer.eos_token_id,
                     eos_token_id=self.tokenizer.eos_token_id,
                     stop_strings=["</think>"],
-                    tokenizer=self.tokenizer
+                    tokenizer=self.tokenizer,
+                    **extra_unpack
                 )
                 think_generated_text = self.tokenizer.decode(think_generated[0], skip_special_tokens=False)
 
@@ -441,7 +456,8 @@ class LoadedModelChat:
                 top_p=self.top_p, repetition_penalty=self.repetition_penalty,
                 pad_token_id=self.tokenizer.eos_token_id,
                 eos_token_id=self.tokenizer.eos_token_id,
-                tokenizer=self.tokenizer
+                tokenizer=self.tokenizer,
+                **extra_unpack
             )
 
         prompt_length = inputs.input_ids.shape[-1]
@@ -542,6 +558,8 @@ def prepare_chat_with_downloaded_model(
     thinking_tokens    : int            = 100,
     temperature        : float          = 0.75,
     top_p              : float          = 0.9,
+    top_k              : int            = None,
+    do_sample          : bool           = None,
     repetition_penalty : float          = 1.05,
     chat_template      : str            = None,
     thinking_type      : int | NoneType = ThinkingType.LOW
@@ -553,6 +571,8 @@ def prepare_chat_with_downloaded_model(
     model.top_p = top_p
     model.repetition_penalty = repetition_penalty
     model.chat_template = chat_template
+    model.do_sample = do_sample
+    model.top_k = top_k
 
     message_fields = MessageFields()
 
@@ -578,11 +598,6 @@ def prepare_chat_with_downloaded_model(
         model.enable_thinking = deep_thinking
         model.can_think = can_think
         if not can_think and thinking_type:
-
-            # special_tokens_dict = {"additional_special_tokens": ["<think>", "</think>"]}
-            # num_added_toks = model.tokenizer.add_special_tokens(special_tokens_dict)
-            # model.model.resize_token_embeddings(len(model.tokenizer))
-
             model.messages.append(
                 MessageFields().generic_context_setting_message(
                     "Before answering, think"+
