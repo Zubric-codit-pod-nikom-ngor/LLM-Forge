@@ -434,6 +434,27 @@ function areEqual(arr1, arr2) {
     return true;
 }
 
+function genericInput() {
+    let main = document.createElement("div")
+    main.classList.add("DarkDiv")
+    main.style.width = "100%"
+    main.style.height = "30px"
+
+    let inp = document.createElement("input")
+    inp.classList.add("JetBrainsFont")
+    inp.style.backgroundColor = "transparent"
+    inp.style.width = "100%"
+    inp.style.height = "100%"
+    inp.style.color = "white"
+    inp.style.fontSize = "12px"
+    inp.style.whiteSpace = "nowrap"
+    inp.style.outline = "none"
+    inp.style.border = "none"
+
+    main.appendChild(inp)
+    return main
+}
+
 function choseChat(item, target_holder, message_holder) {
     if (item.nodeName != "DIV") return
     for (let node of target_holder.children) {
@@ -497,6 +518,687 @@ function messageWrap(role) {
     newContainer.appendChild(lowerContainer)
 
     return newContainer;
+}
+
+function collapseWrap(contents, header) {
+    let newArrow = '<span class="Arrow NoSelect" draggable="false"><span></span><span></span></span>'
+    let placeholder = document.createElement("div");
+    placeholder.innerHTML = newArrow;
+    newArrow = placeholder.firstElementChild;
+    newArrow.style.color = "#515151"
+    newArrow.style.rotate = "-90deg"
+    newArrow.style.transition = "all .1s ease-in-out"
+    newArrow.style.margin = "0"
+    newArrow.style.lineHeight = "100%"
+    newArrow.style.scale = "0.6"
+    newArrow.style.cursor = "pointer"
+
+    let HeaderContainer = document.createElement("div");
+    HeaderContainer.style.width = "100%";
+    HeaderContainer.style.height = "fit-content";
+    HeaderContainer.style.maxWidth = "100%";
+    HeaderContainer.style.gap = "10px";
+    HeaderContainer.classList.add("PosHorizontally");
+    HeaderContainer.style.gap = "5px"
+
+    let newHeader = document.createElement("p");
+    newHeader.classList.add("SenFont")
+    newHeader.style.color = "white"
+    newHeader.style.fontSize = "16px"
+    newHeader.style.fontWeight = "bold"
+    newHeader.style.margin = "0"
+    newHeader.style.padding = "0"
+    newHeader.style.verticalAlign = "middle"
+    newHeader.textContent = header;
+    newHeader.style.cursor = "pointer"
+    newHeader.style.transition = "all .1s ease-in-out"
+    newHeader.style.whiteSpace = "nowrap"
+
+    HeaderContainer.appendChild(newArrow);
+    HeaderContainer.appendChild(newHeader);
+
+    let generalContainer = document.createElement("div");
+    generalContainer.style.width = "100%";
+    generalContainer.style.height = "fit-content";
+    generalContainer.classList.add("PosVertically");
+    generalContainer.style.maxWidth = "100%";
+
+    let contentContainer = document.createElement("div");
+    contentContainer.style.width = "100%";
+    contentContainer.style.height = "fit-content";
+    contentContainer.appendChild(contents)
+    contentContainer.style.display = "none"
+    contentContainer.style.marginLeft = "10px"
+    contentContainer.style.paddingLeft = "14px"
+    contentContainer.style.marginTop = "10px"
+    contentContainer.style.maxWidth = "100%"
+    contentContainer.style.borderLeftWidth = "1px"
+    contentContainer.style.borderLeftStyle = "solid"
+    contentContainer.style.borderImage = "linear-gradient(to bottom, white, white calc(100% - 10px), transparent calc(100% - 10px), transparent) 1"
+
+    function clickcallback() {
+        if (newArrow.style.rotate == "-90deg") {
+            newArrow.style.rotate = "0deg"
+            contentContainer.style.display = "inline-block";
+            newHeader.style.background = "linear-gradient(to bottom, #ff9900, #ff4400)";
+            newHeader.style.backgroundClip = "text"
+            newHeader.style.color = "transparent"
+        } else {
+            newArrow.style.rotate = "-90deg"
+            contentContainer.style.display = "none"
+            newHeader.style.color = "white"
+            newHeader.style.backgroundColor = 'none'
+            newHeader.style.backgroundClip = "none"
+        }
+    }
+
+    newArrow.onclick = clickcallback;
+    newHeader.onclick = clickcallback;
+
+
+    generalContainer.appendChild(HeaderContainer)
+    generalContainer.appendChild(contentContainer);
+
+    return generalContainer;
+}
+
+function genericEmptyInstancePull(name) {
+    let newDiv = document.createElement("div");
+    newDiv.style.padding = "10px";
+    newDiv.style.width = "calc(100% - 25px)";
+    newDiv.style.height = "fit-content";
+    newDiv.classList.add("DarkDiv")
+
+    let newLabel = document.createElement("p");
+    newLabel.style.color = "white"
+    newLabel.style.fontSize = "16px"
+    newLabel.style.fontWeight = "bold"
+    newLabel.classList.add("JetBrainsFont")
+    newLabel.style.whiteSpace = "nowrap"
+    newLabel.textContent = name
+    newLabel.style.lineHeight = "100%"
+    newLabel.style.margin = "0"
+
+    newDiv.style.cursor = "grab"
+    newDiv.appendChild(newLabel);
+    return newDiv
+}
+
+function visualizeAnInstance(name, instancePull) {
+    let instanceContainer = document.createElement("div")
+    instanceContainer.style.width = "calc(100% - 10px)"
+    instanceContainer.style.height = "fit-content"
+    instanceContainer.classList.add("SearchTile")
+    instanceContainer.style.borderRadius = "10px"
+    instanceContainer.style.padding = "5px"
+    instanceContainer.style.margin = "5px"
+    instanceContainer.style.marginBottom = "10px"
+    instanceContainer.style.transition = "all 0.2s ease-in-out"
+
+    let settingsContainer = document.createElement("div")
+    settingsContainer.style.maxWidth = "100%"
+    settingsContainer.style.height = "fit-content"
+
+
+    let outerDeepThinkContainer = document.createElement("div")
+    outerDeepThinkContainer.classList.add("PosVertically")
+    outerDeepThinkContainer.style.height = "40px"
+
+    let deepThinkContainer = document.createElement("div")
+    deepThinkContainer.style.width = "calc(100% - 25px)"
+    deepThinkContainer.style.display = "flex"
+    deepThinkContainer.style.gap = "5px"
+    deepThinkContainer.classList.add("PosHorizontally")
+
+    let deepThinkSlider = document.createElement("input")
+    deepThinkSlider.type = "range"
+    deepThinkSlider.style.flexGrow = "1"
+    deepThinkSlider.style.height = "10px"
+    deepThinkSlider.min = "0"
+    deepThinkSlider.max = "4"
+    deepThinkSlider.value = "0"
+    deepThinkSlider.classList.add("CustomSlider")
+    deepThinkSlider.oninput = (e) => {
+        let gradspec = ((1/4)*deepThinkSlider.value*100).toFixed(3);
+        deepThinkSlider.style.background = "linear-gradient(to right, #ff4400, #ff9900 "+gradspec+"%, #1b1b1b "+gradspec+"%, #1b1b1b)"
+    }
+
+    let deepThinkLabel = document.createElement("p")
+    deepThinkLabel.style.color = "white"
+    deepThinkLabel.style.fontSize = "13px"
+    deepThinkLabel.style.whiteSpace = "nowrap"
+    deepThinkLabel.classList.add("JetBrainsFont")
+    deepThinkLabel.textContent = "Deep Thinking"
+    deepThinkLabel.style.lineHeight = "100%"
+    deepThinkLabel.style.margin = "0"
+
+    let noneLabel = document.createElement("p")
+    noneLabel.style.color = "#4e4e4e"
+    noneLabel.style.fontSize = "13px"
+    noneLabel.style.whiteSpace = "nowrap"
+    noneLabel.classList.add("JetBrainsFont")
+    noneLabel.textContent = "None"
+    noneLabel.style.lineHeight = "100%"
+    noneLabel.style.margin = "0"
+    noneLabel.style.position = "absolute"
+    noneLabel.style.left = "0"
+
+    let normalLabel = document.createElement("p")
+    normalLabel.style.color = "#4e4e4e"
+    normalLabel.style.fontSize = "13px"
+    normalLabel.style.whiteSpace = "nowrap"
+    normalLabel.classList.add("JetBrainsFont")
+    normalLabel.textContent = "Normal"
+    normalLabel.style.textAlign = "center"
+    normalLabel.style.lineHeight = "100%"
+    normalLabel.style.margin = "0"
+    normalLabel.style.position = "absolute"
+    normalLabel.style.left = "0"
+    normalLabel.style.width = "calc(100% - 25px)"
+
+    let maxLabel = document.createElement("p")
+    maxLabel.style.color = "#4e4e4e"
+    maxLabel.style.fontSize = "13px"
+    maxLabel.style.whiteSpace = "nowrap"
+    maxLabel.classList.add("JetBrainsFont")
+    maxLabel.textContent = "Max"
+    maxLabel.style.lineHeight = "100%"
+    maxLabel.style.margin = "0"
+    maxLabel.style.position = "absolute"
+    maxLabel.style.transform = "translateX(-100%)"
+    maxLabel.style.left = "calc(100% - 25px)"
+    maxLabel.style.textAlign = "right"
+
+    let underlineDeepThinkContainer = document.createElement("div")
+    underlineDeepThinkContainer.style.width = "calc(100% - 107.5px)"
+    underlineDeepThinkContainer.style.marginLeft = "107.5px"
+    underlineDeepThinkContainer.style.marginTop = "5px"
+    underlineDeepThinkContainer.style.display = "flex"
+    underlineDeepThinkContainer.classList.add("PosHorizontally")
+    underlineDeepThinkContainer.appendChild(noneLabel)
+    underlineDeepThinkContainer.appendChild(normalLabel)
+    underlineDeepThinkContainer.appendChild(maxLabel)
+    deepThinkContainer.appendChild(deepThinkLabel)
+    deepThinkContainer.appendChild(deepThinkSlider)
+    outerDeepThinkContainer.appendChild(deepThinkContainer)
+    outerDeepThinkContainer.appendChild(underlineDeepThinkContainer)
+
+
+
+    let outerTemperatureContainer = document.createElement("div")
+    outerTemperatureContainer.classList.add("PosVertically")
+    outerTemperatureContainer.style.height = "40px"
+
+    let temperatureContainer = document.createElement("div")
+    temperatureContainer.style.width = "calc(100% - 25px)"
+    temperatureContainer.style.display = "flex"
+    temperatureContainer.style.gap = "5px"
+    temperatureContainer.classList.add("PosHorizontally")
+
+    let temperatureSlider = document.createElement("input")
+    temperatureSlider.type = "range"
+    temperatureSlider.style.flexGrow = "1"
+    temperatureSlider.style.height = "10px"
+    temperatureSlider.min = "1"
+    temperatureSlider.max = "100"
+    temperatureSlider.value = "1"
+    temperatureSlider.classList.add("CustomSlider")
+    temperatureSlider.oninput = (e) => {
+        let gradspec = ((1/100)*temperatureSlider.value*100).toFixed(3);
+        temperatureSlider.style.background = "linear-gradient(to right, #ff4400, #ff9900 "+gradspec+"%, #1b1b1b "+gradspec+"%, #1b1b1b)"
+    }
+
+    let temperatureLabel = document.createElement("p")
+    temperatureLabel.style.color = "white"
+    temperatureLabel.style.fontSize = "13px"
+    temperatureLabel.style.whiteSpace = "nowrap"
+    temperatureLabel.classList.add("JetBrainsFont")
+    temperatureLabel.textContent = "Temperature"
+    temperatureLabel.style.minWidth = "101.41px"
+    temperatureLabel.style.lineHeight = "100%"
+    temperatureLabel.style.margin = "0"
+
+    let T0 = document.createElement("p")
+    T0.style.color = "#4e4e4e"
+    T0.style.fontSize = "13px"
+    T0.style.whiteSpace = "nowrap"
+    T0.classList.add("JetBrainsFont")
+    T0.textContent = "0.0"
+    T0.style.lineHeight = "100%"
+    T0.style.margin = "0"
+    T0.style.position = "absolute"
+    T0.style.left = "0"
+
+    let T50 = document.createElement("p")
+    T50.style.color = "#4e4e4e"
+    T50.style.fontSize = "13px"
+    T50.style.whiteSpace = "nowrap"
+    T50.classList.add("JetBrainsFont")
+    T50.textContent = "0.5"
+    T50.style.textAlign = "center"
+    T50.style.lineHeight = "100%"
+    T50.style.margin = "0"
+    T50.style.position = "absolute"
+    T50.style.left = "0"
+    T50.style.width = "calc(100% - 25px)"
+
+    let T100 = document.createElement("p")
+    T100.style.color = "#4e4e4e"
+    T100.style.fontSize = "13px"
+    T100.style.whiteSpace = "nowrap"
+    T100.classList.add("JetBrainsFont")
+    T100.textContent = "1.0"
+    T100.style.lineHeight = "100%"
+    T100.style.margin = "0"
+    T100.style.position = "absolute"
+    T100.style.transform = "translateX(-100%)"
+    T100.style.left = "calc(100% - 25px)"
+    T100.style.textAlign = "right"
+
+    let underlineTemperatureContainer = document.createElement("div")
+    underlineTemperatureContainer.style.width = "calc(100% - 107.5px)"
+    underlineTemperatureContainer.style.marginLeft = "107.5px"
+    underlineTemperatureContainer.style.marginTop = "5px"
+    underlineTemperatureContainer.style.display = "flex"
+    underlineTemperatureContainer.classList.add("PosHorizontally")
+    underlineTemperatureContainer.appendChild(T0)
+    underlineTemperatureContainer.appendChild(T50)
+    underlineTemperatureContainer.appendChild(T100)
+    temperatureContainer.appendChild(temperatureLabel)
+    temperatureContainer.appendChild(temperatureSlider)
+    outerTemperatureContainer.appendChild(temperatureContainer)
+    outerTemperatureContainer.appendChild(underlineTemperatureContainer)
+
+
+
+    let outertoppContainer = document.createElement("div")
+    outertoppContainer.classList.add("PosVertically")
+    outertoppContainer.style.height = "40px"
+
+    let toppContainer = document.createElement("div")
+    toppContainer.style.width = "calc(100% - 25px)"
+    toppContainer.style.display = "flex"
+    toppContainer.style.gap = "5px"
+    toppContainer.classList.add("PosHorizontally")
+
+    let toppSlider = document.createElement("input")
+    toppSlider.type = "range"
+    toppSlider.style.flexGrow = "1"
+    toppSlider.style.height = "10px"
+    toppSlider.min = "1"
+    toppSlider.max = "100"
+    toppSlider.value = "1"
+    toppSlider.classList.add("CustomSlider")
+    toppSlider.oninput = (e) => {
+        let gradspec = ((1/100)*toppSlider.value*100).toFixed(3);
+        toppSlider.style.background = "linear-gradient(to right, #ff4400, #ff9900 "+gradspec+"%, #1b1b1b "+gradspec+"%, #1b1b1b)"
+    }
+
+    let toppLabel = document.createElement("p")
+    toppLabel.style.color = "white"
+    toppLabel.style.fontSize = "13px"
+    toppLabel.style.whiteSpace = "nowrap"
+    toppLabel.classList.add("JetBrainsFont")
+    toppLabel.textContent = "Top-p"
+    toppLabel.style.minWidth = "101.41px"
+    toppLabel.style.lineHeight = "100%"
+    toppLabel.style.margin = "0"
+
+    let TPP0 = document.createElement("p")
+    TPP0.style.color = "#4e4e4e"
+    TPP0.style.fontSize = "13px"
+    TPP0.style.whiteSpace = "nowrap"
+    TPP0.classList.add("JetBrainsFont")
+    TPP0.textContent = "0.0"
+    TPP0.style.lineHeight = "100%"
+    TPP0.style.margin = "0"
+    TPP0.style.position = "absolute"
+    TPP0.style.left = "0"
+
+    let TPP50 = document.createElement("p")
+    TPP50.style.color = "#4e4e4e"
+    TPP50.style.fontSize = "13px"
+    TPP50.style.whiteSpace = "nowrap"
+    TPP50.classList.add("JetBrainsFont")
+    TPP50.textContent = "0.5"
+    TPP50.style.textAlign = "center"
+    TPP50.style.lineHeight = "100%"
+    TPP50.style.margin = "0"
+    TPP50.style.position = "absolute"
+    TPP50.style.left = "0"
+    TPP50.style.width = "calc(100% - 25px)"
+
+    let TPP100 = document.createElement("p")
+    TPP100.style.color = "#4e4e4e"
+    TPP100.style.fontSize = "13px"
+    TPP100.style.whiteSpace = "nowrap"
+    TPP100.classList.add("JetBrainsFont")
+    TPP100.textContent = "1.0"
+    TPP100.style.lineHeight = "100%"
+    TPP100.style.margin = "0"
+    TPP100.style.position = "absolute"
+    TPP100.style.transform = "translateX(-100%)"
+    TPP100.style.left = "calc(100% - 25px)"
+    TPP100.style.textAlign = "right"
+
+    let underlinetppContainer = document.createElement("div")
+    underlinetppContainer.style.width = "calc(100% - 107.5px)"
+    underlinetppContainer.style.marginLeft = "107.5px"
+    underlinetppContainer.style.marginTop = "5px"
+    underlinetppContainer.style.display = "flex"
+    underlinetppContainer.classList.add("PosHorizontally")
+    underlinetppContainer.appendChild(TPP0)
+    underlinetppContainer.appendChild(TPP50)
+    underlinetppContainer.appendChild(TPP100)
+    toppContainer.appendChild(toppLabel)
+    toppContainer.appendChild(toppSlider)
+    outertoppContainer.appendChild(toppContainer)
+    outertoppContainer.appendChild(underlinetppContainer)
+
+
+
+    let outerrppContainer = document.createElement("div")
+    outerrppContainer.classList.add("PosVertically")
+    outerrppContainer.style.height = "40px"
+
+    let rppContainer = document.createElement("div")
+    rppContainer.style.width = "calc(100% - 25px)"
+    rppContainer.style.display = "flex"
+    rppContainer.style.gap = "5px"
+    rppContainer.classList.add("PosHorizontally")
+
+    let rppSlider = document.createElement("input")
+    rppSlider.type = "range"
+    rppSlider.style.flexGrow = "1"
+    rppSlider.style.height = "10px"
+    rppSlider.min = "80"
+    rppSlider.max = "140"
+    rppSlider.value = "80"
+    rppSlider.classList.add("CustomSlider")
+    rppSlider.oninput = (e) => {
+        let gradspec = ((1/60)*(rppSlider.value-80)*100).toFixed(3);
+        rppSlider.style.background = "linear-gradient(to right, #ff4400, #ff9900 "+gradspec+"%, #1b1b1b "+gradspec+"%, #1b1b1b)"
+    }
+
+    let rppLabel = document.createElement("p")
+    rppLabel.style.color = "white"
+    rppLabel.style.fontSize = "13px"
+    rppLabel.classList.add("JetBrainsFont")
+    rppLabel.textContent = "Repetition Penalty"
+    rppLabel.style.minWidth = "101.41px"
+    rppLabel.style.maxWidth = "101.41px"
+    rppLabel.style.lineHeight = "120%"
+    rppLabel.style.margin = "0"
+
+    let RPP0 = document.createElement("p")
+    RPP0.style.color = "#4e4e4e"
+    RPP0.style.fontSize = "13px"
+    RPP0.style.whiteSpace = "nowrap"
+    RPP0.classList.add("JetBrainsFont")
+    RPP0.textContent = "0.8"
+    RPP0.style.lineHeight = "100%"
+    RPP0.style.margin = "0"
+    RPP0.style.position = "absolute"
+    RPP0.style.left = "0"
+
+    let RPP50 = document.createElement("p")
+    RPP50.style.color = "#4e4e4e"
+    RPP50.style.fontSize = "13px"
+    RPP50.style.whiteSpace = "nowrap"
+    RPP50.classList.add("JetBrainsFont")
+    RPP50.textContent = "1.1"
+    RPP50.style.textAlign = "center"
+    RPP50.style.lineHeight = "100%"
+    RPP50.style.margin = "0"
+    RPP50.style.position = "absolute"
+    RPP50.style.left = "0"
+    RPP50.style.width = "calc(100% - 25px)"
+
+    let RPP100 = document.createElement("p")
+    RPP100.style.color = "#4e4e4e"
+    RPP100.style.fontSize = "13px"
+    RPP100.style.whiteSpace = "nowrap"
+    RPP100.classList.add("JetBrainsFont")
+    RPP100.textContent = "1.4"
+    RPP100.style.lineHeight = "100%"
+    RPP100.style.margin = "0"
+    RPP100.style.position = "absolute"
+    RPP100.style.transform = "translateX(-100%)"
+    RPP100.style.left = "calc(100% - 25px)"
+    RPP100.style.textAlign = "right"
+
+    let underlineRPPContainer = document.createElement("div")
+    underlineRPPContainer.style.width = "calc(100% - 107.5px)"
+    underlineRPPContainer.style.marginLeft = "107.5px"
+    underlineRPPContainer.style.position = "absolute"
+    underlineRPPContainer.style.top = "12px"
+    underlineRPPContainer.style.marginTop = "5px"
+    underlineRPPContainer.style.display = "flex"
+    underlineRPPContainer.classList.add("PosHorizontally")
+    underlineRPPContainer.appendChild(RPP0)
+    underlineRPPContainer.appendChild(RPP50)
+    underlineRPPContainer.appendChild(RPP100)
+    rppContainer.appendChild(rppLabel)
+    rppContainer.appendChild(rppSlider)
+    outerrppContainer.appendChild(rppContainer)
+    outerrppContainer.appendChild(underlineRPPContainer)
+
+
+
+    let samplingLabel = document.createElement("p")
+    samplingLabel.style.color = "white"
+    samplingLabel.style.fontSize = "13px"
+    samplingLabel.style.whiteSpace = "nowrap"
+    samplingLabel.classList.add("JetBrainsFont")
+    samplingLabel.textContent = "Sampling"
+    samplingLabel.style.lineHeight = "100%"
+    samplingLabel.style.margin = "0"
+    samplingLabel.style.minWidth = "101.41px"
+
+    let samplingCheckbox = document.createElement("input")
+    samplingCheckbox.type = "checkbox"
+    samplingCheckbox.classList.add("CustomCheckbox")
+    samplingCheckbox.onclick = (e) => {
+        if (samplingCheckbox.checked) {
+            samplingContainer.before(topkContainer)
+        } else {
+            settingsContainer.removeChild(topkContainer)
+        }
+    }
+
+    let samplingContainer = document.createElement("div")
+    samplingContainer.style.width = "100%"
+    samplingContainer.style.width = "calc(100% - 25px)"
+    samplingContainer.style.display = "flex"
+    samplingContainer.style.gap = "5px"
+    samplingContainer.classList.add("PosHorizontally")
+    samplingContainer.style.alignItems = "center"
+    samplingContainer.style.marginBottom = "5px"
+
+    samplingContainer.appendChild(samplingLabel)
+    samplingContainer.appendChild(samplingCheckbox)
+
+
+
+    let topkLabel = document.createElement("p")
+    topkLabel.style.color = "white"
+    topkLabel.style.fontSize = "13px"
+    topkLabel.style.whiteSpace = "nowrap"
+    topkLabel.classList.add("JetBrainsFont")
+    topkLabel.textContent = "Top-k"
+    topkLabel.style.lineHeight = "100%"
+    topkLabel.style.margin = "0"
+    topkLabel.style.minWidth = "101.41px"
+
+    let topkInput = genericInput()
+    topkInput.firstElementChild.type = "number"
+    topkInput.firstElementChild.min = "1"
+    topkInput.firstElementChild.placeholder = "Integer Value..."
+    topkInput.firstElementChild.step = "5"
+
+    let topkContainer = document.createElement("div")
+    topkContainer.style.width = "100%"
+    topkContainer.style.width = "calc(100% - 25px)"
+    topkContainer.style.display = "flex"
+    topkContainer.style.gap = "5px"
+    topkContainer.classList.add("PosHorizontally")
+    topkContainer.style.alignItems = "center"
+    topkContainer.style.marginBottom = "5px"
+
+    topkContainer.appendChild(topkLabel)
+    topkContainer.appendChild(topkInput)
+
+
+
+    let tokenLabel = document.createElement("p")
+    tokenLabel.style.color = "white"
+    tokenLabel.style.fontSize = "13px"
+    tokenLabel.style.whiteSpace = "nowrap"
+    tokenLabel.classList.add("JetBrainsFont")
+    tokenLabel.textContent = "Token Limit"
+    tokenLabel.style.lineHeight = "100%"
+    tokenLabel.style.margin = "0"
+    tokenLabel.style.minWidth = "101.41px"
+
+    let tokenInput = genericInput()
+    tokenInput.firstElementChild.type = "number"
+    tokenInput.firstElementChild.min = "1"
+    tokenInput.firstElementChild.placeholder = "Integer Value..."
+    tokenInput.firstElementChild.step = "5"
+
+    let tokenContainer = document.createElement("div")
+    tokenContainer.style.width = "100%"
+    tokenContainer.style.width = "calc(100% - 25px)"
+    tokenContainer.style.display = "flex"
+    tokenContainer.style.gap = "5px"
+    tokenContainer.classList.add("PosHorizontally")
+    tokenContainer.style.alignItems = "center"
+    tokenContainer.style.marginBottom = "5px"
+
+    tokenContainer.appendChild(tokenLabel)
+    tokenContainer.appendChild(tokenInput)
+
+
+
+    let thinkingTokenLabel = document.createElement("p")
+    thinkingTokenLabel.style.color = "white"
+    thinkingTokenLabel.style.fontSize = "13px"
+    thinkingTokenLabel.classList.add("JetBrainsFont")
+    thinkingTokenLabel.textContent = "Thinking Token Limit"
+    thinkingTokenLabel.style.maxWidth = "101.41px"
+    thinkingTokenLabel.style.lineHeight = "100%"
+    thinkingTokenLabel.style.margin = "0"
+    thinkingTokenLabel.style.minWidth = "101.41px"
+    thinkingTokenLabel.style.lineHeight = "120%"
+
+    let thinkingTokenInput = genericInput()
+    thinkingTokenInput.firstElementChild.type = "number"
+    thinkingTokenInput.firstElementChild.min = "1"
+    thinkingTokenInput.firstElementChild.placeholder = "Integer Value..."
+    thinkingTokenInput.firstElementChild.step = "5"
+
+    let thinkingTokenContainer = document.createElement("div")
+    thinkingTokenContainer.style.width = "100%"
+    thinkingTokenContainer.style.width = "calc(100% - 25px)"
+    thinkingTokenContainer.style.display = "flex"
+    thinkingTokenContainer.style.gap = "5px"
+    thinkingTokenContainer.classList.add("PosHorizontally")
+    thinkingTokenContainer.style.alignItems = "center"
+    thinkingTokenContainer.style.marginBottom = "5px"
+
+    thinkingTokenContainer.appendChild(thinkingTokenLabel)
+    thinkingTokenContainer.appendChild(thinkingTokenInput)
+
+    let chatTemplateLabel = document.createElement("p")
+    chatTemplateLabel.style.color = "white"
+    chatTemplateLabel.style.fontSize = "13px"
+    chatTemplateLabel.style.whiteSpace = "nowrap"
+    chatTemplateLabel.classList.add("JetBrainsFont")
+    chatTemplateLabel.textContent = "Chat Template"
+    chatTemplateLabel.style.lineHeight = "100%"
+    chatTemplateLabel.style.margin = "0"
+    chatTemplateLabel.style.minWidth = "101.41px"
+
+    let temp_Div = document.createElement("div")
+    temp_Div.innerHTML = '<div class="DarkDiv" style="padding: 5px; z-index: 500; box-shadow: 0 10px 10px rgba(0,0,0,0.2); border-radius: 10px; width: 100%; height: fit-content; min-height: 80px">' +
+        '    <textarea style=\"width: 100%; height: fit-content; color: white; font-size: 12px; resize: none; field-sizing: content; background-color: transparent; border: transparent; outline: none\" class=\"JetBrainsFont\" placeholder=\"Any custom chat template (will not apply if unfilleld)\"></textarea>' +
+        '</div>'
+    let chatTemplateInput = temp_Div.firstElementChild
+    chatTemplateInput.style.width = "calc(100% - 106.41px)"
+    chatTemplateInput.style.maxWidth = "calc(100% - 106.41px)"
+    chatTemplateInput.style.maxWidth = "100%"
+
+    let chatTemplateContainer = document.createElement("div")
+    chatTemplateContainer.style.width = "100%"
+    chatTemplateContainer.style.width = "calc(100% - 25px)"
+    chatTemplateContainer.style.display = "flex"
+    chatTemplateContainer.style.gap = "5px"
+    chatTemplateContainer.classList.add("PosHorizontally")
+    chatTemplateContainer.style.alignItems = "center"
+    chatTemplateContainer.style.marginBottom = "5px"
+
+    chatTemplateContainer.appendChild(chatTemplateLabel)
+    chatTemplateContainer.appendChild(chatTemplateInput)
+    settingsContainer.appendChild(outerDeepThinkContainer)
+    settingsContainer.appendChild(outerTemperatureContainer)
+    settingsContainer.appendChild(outertoppContainer)
+    settingsContainer.appendChild(outerrppContainer)
+    settingsContainer.appendChild(samplingContainer)
+    settingsContainer.appendChild(tokenContainer)
+    settingsContainer.appendChild(thinkingTokenContainer)
+    settingsContainer.appendChild(chatTemplateContainer)
+
+    let instancePullWrapper = document.createElement("div")
+    instancePullWrapper.classList.add("PosHorizontally")
+    instancePullWrapper.style.display = "flex"
+    instancePullWrapper.style.flexDirection = "row"
+    instancePullWrapper.style.width = "calc(100% - 27px)"
+    instancePullWrapper.style.marginTop = "10px"
+    instancePullWrapper.style.marginBottom = "10px"
+    instancePullWrapper.style.alignItems = "center"
+    instancePullWrapper.style.gap = "5px"
+
+    let instancePullLabel = document.createElement("p")
+    instancePullLabel.style.fontSize = "16px"
+    instancePullLabel.classList.add("SenFont")
+    instancePullLabel.textContent = "USE THIS INSTANCE"
+    instancePullLabel.style.lineHeight = "100%"
+    instancePullLabel.style.fontWeight = "bold"
+    instancePullLabel.style.margin = "0"
+    instancePullLabel.style.minWidth = "101.41px"
+    instancePullLabel.style.lineHeight = "120%"
+    instancePullLabel.style.background = "linear-gradient(to bottom, #ff9900, #ff4400)";
+    instancePullLabel.style.backgroundClip = "text"
+    instancePullLabel.style.color = "transparent"
+
+    let divider = document.createElement("div")
+    divider.style.flexShrink = "0"
+    divider.style.height = "3px"
+    divider.style.flexGrow = "1"
+    divider.style.backgroundImage = "linear-gradient(to left, #ff4400, #ff9900)"
+    divider.style.transition = "all 0.25s"
+    divider.style.borderRadius = "1.5px"
+
+    instancePullWrapper.appendChild(instancePullLabel)
+    instancePullWrapper.appendChild(divider)
+    settingsContainer.appendChild(instancePullWrapper)
+    settingsContainer.appendChild(instancePull)
+
+    let instanceWipeButton = genericEmptyInstancePull("WIPE "+name)
+    instanceWipeButton.classList.remove("DarkDiv")
+    instanceWipeButton.classList.add("SearchTile")
+    instanceWipeButton.style.backgroundColor = "#ff1f1f"
+    instanceWipeButton.style.borderColor = "#b60000"
+    instanceWipeButton.style.cursor = "pointer"
+    instanceWipeButton.style.borderWidth = "2px"
+    instanceWipeButton.style.borderRadius = "10px"
+    instanceWipeButton.style.marginTop = "10px"
+    instanceWipeButton.style.marginBottom = "10px"
+
+    settingsContainer.appendChild(instanceWipeButton)
+
+    instanceContainer.appendChild(collapseWrap(settingsContainer, name))
+    return instanceContainer;
 }
 
 window.EXTENSION_SNIPPET_STARTUP_MUTATION_CALLBACKS.push(
@@ -772,6 +1474,11 @@ window.EXTENSION_SNIPPET_STARTUP_MUTATION_CALLBACKS.push(
                     message_container.appendChild(new_message1)
                     message_container.appendChild(new_message2)
                     message_container.appendChild(new_message3)
+                }
+                if (node.getAttribute("itemext") === "core-modelManager") {
+                    let mainContainer = document.getElementById("core-modelManager-mainContainer")
+
+                    mainContainer.appendChild(visualizeAnInstance("GENERIC MODEL", genericEmptyInstancePull("GENERIC MODEL")))
                 }
             })
         }

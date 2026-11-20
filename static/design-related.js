@@ -790,6 +790,7 @@ async function start_extra_load() {
     extra_load_key = await generateKey()
     extra_load.style.top = "50%"
     blur_layer.style.backdropFilter = "blur(120px)"
+    blur_layer.style.pointerEvents = "auto"
     await sleep(500)
     extra_load.style.boxShadow = "#ff3c00 0 0 50px"
     await sleep(500)
@@ -808,6 +809,7 @@ async function end_extra_load() {
     await sleep(500)
     extra_load.style.top = "-100%"
     blur_layer.style.removeProperty("backdrop-filter")
+    blur_layer.style.pointerEvents = "none"
     await sleep(500)
 }
 window.end_extra_load = end_extra_load;

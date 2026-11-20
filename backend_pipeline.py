@@ -625,6 +625,7 @@ def prepare_chat_with_downloaded_model(
 #     thinking_type=ThinkingType.MAX,
 #     thinking_tokens=1024
 # )
+# print(model.tokenizer.vocab_size)
 # # # download_hf_model(model_id, "./backed_up/essential/models/qwen")
 # # # model = load_downloaded_model("./backed_up")
 # model.token_limits = 2048
