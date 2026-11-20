@@ -17,6 +17,8 @@ from collections.abc import Iterable
 from huggingface_hub import ModelCard
 import tempfile
 import torch
+import hashlib
+import datetime
 
 
 
@@ -129,6 +131,13 @@ def load_lastest_layout():
         "HTML_PART": html_part
     }
 
+def generate_time_hash():
+    ctime = datetime.datetime.now()
+    hash_ = hashlib.sha1(str(ctime).encode())
+    hexed = hash_.hexdigest().upper()
+    return hexed
+
+
 
 hf_api = huggingface_hub.HfApi()
 
@@ -137,6 +146,8 @@ backed_up_path = pathlib.Path("./backed_up").absolute()
 settings: dict = load_settings()
 
 path_map: dict = get_path_map()
+
+model_instance_vault = {}
 
 API_KEY = settings["token"]
 huggingface_hub.login(
@@ -382,6 +393,10 @@ class LoadedModelChat:
         self.can_think = can_think
         self.top_k = top_k
         self.do_sample = do_sample
+        # TODO Implement name generation
+
+    def __str__(self):
+        return "LoadedModelChat(name="+self.name+"...)"
 
     def file_up(self, message, depth=0):
         self.messages.append(
