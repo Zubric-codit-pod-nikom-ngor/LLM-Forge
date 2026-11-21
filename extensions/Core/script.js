@@ -451,6 +451,8 @@ function genericInput() {
     inp.style.outline = "none"
     inp.style.border = "none"
 
+    main.style.boxShadow = "0 10px 10px rgba(0,0,0,0.2)"
+
     main.appendChild(inp)
     return main
 }
@@ -574,7 +576,8 @@ function collapseWrap(contents, header) {
     contentContainer.style.maxWidth = "100%"
     contentContainer.style.borderLeftWidth = "1px"
     contentContainer.style.borderLeftStyle = "solid"
-    contentContainer.style.borderImage = "linear-gradient(to bottom, white, white calc(100% - 10px), transparent calc(100% - 10px), transparent) 1"
+    contentContainer.style.borderImage = "linear-gradient(to bottom, #828282, #828282 calc(100% - 10px), transparent calc(100% - 10px), transparent) 1"
+    contentContainer.style.borderBottomLeftRadius = "10px"
 
     function clickcallback() {
         if (newArrow.style.rotate == "-90deg") {
@@ -624,11 +627,13 @@ function genericEmptyInstancePull(name) {
     return newDiv
 }
 
-function visualizeAnInstance(name, instancePull) {
+function visualizeAnInstance(name, modelName, instancePull) {
     let instanceContainer = document.createElement("div")
     instanceContainer.style.width = "calc(100% - 10px)"
     instanceContainer.style.height = "fit-content"
-    instanceContainer.classList.add("SearchTile")
+    instanceContainer.style.backgroundColor = "#2f2f2f"
+    instanceContainer.style.border = "#606060 solid 1px"
+    instanceContainer.style.boxShadow = "0 5px 10px rgba(0, 0, 0, 0.3)"
     instanceContainer.style.borderRadius = "10px"
     instanceContainer.style.padding = "5px"
     instanceContainer.style.margin = "5px"
@@ -638,6 +643,41 @@ function visualizeAnInstance(name, instancePull) {
     let settingsContainer = document.createElement("div")
     settingsContainer.style.maxWidth = "100%"
     settingsContainer.style.height = "fit-content"
+
+
+
+    let modelLabel = document.createElement("p")
+    modelLabel.style.color = "white"
+    modelLabel.style.fontSize = "13px"
+    modelLabel.style.whiteSpace = "nowrap"
+    modelLabel.classList.add("JetBrainsFont")
+    modelLabel.textContent = "LLM name"
+    modelLabel.style.lineHeight = "100%"
+    modelLabel.style.margin = "0"
+    modelLabel.style.minWidth = "101.41px"
+
+    let modelDLabel = document.createElement("p")
+    modelDLabel.style.color = "white"
+    modelDLabel.style.fontSize = "13px"
+    modelDLabel.classList.add("JetBrainsFont")
+    modelDLabel.textContent = modelName
+    modelDLabel.style.lineHeight = "100%"
+    modelDLabel.style.margin = "0"
+
+    let modelContainer = document.createElement("div")
+    modelContainer.style.width = "100%"
+    modelContainer.style.width = "calc(100% - 25px)"
+    modelContainer.style.display = "flex"
+    modelContainer.style.gap = "5px"
+    modelContainer.classList.add("PosHorizontally")
+    modelContainer.style.alignItems = "center"
+    modelContainer.style.marginBottom = "15px"
+
+    modelContainer.appendChild(modelLabel)
+    modelContainer.appendChild(modelDLabel)
+
+    settingsContainer.appendChild(modelContainer)
+
 
 
     let outerDeepThinkContainer = document.createElement("div")
@@ -1194,11 +1234,26 @@ function visualizeAnInstance(name, instancePull) {
     instanceWipeButton.style.borderRadius = "10px"
     instanceWipeButton.style.marginTop = "10px"
     instanceWipeButton.style.marginBottom = "10px"
+    instanceWipeButton.style.boxShadow = "0 5px 5px rgba(0,0,0, 0.1)"
 
     settingsContainer.appendChild(instanceWipeButton)
 
     instanceContainer.appendChild(collapseWrap(settingsContainer, name))
-    return instanceContainer;
+
+    let valueGetter = () => {
+        return {
+            "thinking_type": deepThinkSlider.valueAsNumber,
+            "top_p": toppSlider.valueAsNumber / 100,
+            "top_k": topkInput.firstElementChild.valueAsNumber,
+            "do_sample": samplingCheckbox.checked,
+            "repetition_penalty": rppSlider.valueAsNumber / 100,
+            "thinking_tokens": thinkingTokenInput.firstElementChild.valueAsNumber,
+            "token_limits": tokenInput.firstElementChild.valueAsNumber,
+            "chat_template": (chatTemplateInput.firstElementChild.value) ? chatTemplateInput.firstElementChild.value : NaN,
+        }
+    }
+
+    return [instanceContainer, valueGetter];
 }
 
 window.EXTENSION_SNIPPET_STARTUP_MUTATION_CALLBACKS.push(
@@ -1478,7 +1533,9 @@ window.EXTENSION_SNIPPET_STARTUP_MUTATION_CALLBACKS.push(
                 if (node.getAttribute("itemext") === "core-modelManager") {
                     let mainContainer = document.getElementById("core-modelManager-mainContainer")
 
-                    mainContainer.appendChild(visualizeAnInstance("GENERIC MODEL", genericEmptyInstancePull("GENERIC MODEL")))
+                    let [ instanceContainer, getter ] = visualizeAnInstance("GENERIC MODEL", "SIGMA MODEL", genericEmptyInstancePull("GENERIC MODEL"))
+
+                    mainContainer.appendChild(instanceContainer)
                 }
             })
         }
