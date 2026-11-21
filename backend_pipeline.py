@@ -169,6 +169,7 @@ def generate_instance(
     token_limits,
     thinking_tokens,
     relative_path_map_field: str,
+    existing_key: str = None
 ):
     if relative_path_map_field in loaded_models_vault.keys():
         model = loaded_models_vault[relative_path_map_field]
@@ -192,6 +193,7 @@ def generate_instance(
     )
 
     new_key = generate_time_hash()
+    if not existing_key: existing_key = new_key[:]
     model_instance_vault[new_key] = new_instance
 
     return new_key

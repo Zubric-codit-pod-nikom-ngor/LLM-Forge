@@ -11,6 +11,8 @@ let SVGs = {
     "document": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAtElEQVR4nO3WQQrCQBBE0TqFiPc/kiiepiQwCxFcRLpqkun60GQZHukhA6RzReE8AFxXgBDAC8DNCanOjqEY8vx4StdMDbkAuDu+DMUQuDA0QCwYmiByDI2QLRnGDZFhZkAkmFmQcozjz77nbrYEhBUvnB0DGQVSHAPpBmHx/CqQdqvlioF0g1B0uL8LpN1quWIg3SBc5YrCVSCuGMgokOIYyCiQ4hjIKJCjQniQ+btlIAnm3gBxwrjC8DB8AAAAAElFTkSuQmCC"
 }
 
+let formed_instances = {}
+
 
 window.extendSnapshotStates(() => {
     return {
@@ -1532,6 +1534,37 @@ window.EXTENSION_SNIPPET_STARTUP_MUTATION_CALLBACKS.push(
                 }
                 if (node.getAttribute("itemext") === "core-modelManager") {
                     let mainContainer = document.getElementById("core-modelManager-mainContainer")
+                    let entryContainer = document.getElementById("core-modelManager-entry")
+                    let temp_keys
+
+                    entryContainer.addEventListener("dragenter", () => {
+                        entryContainer.firstElementChild.classList.add("AuroraRim-rim")
+                        entryContainer.classList.add("AuroraRim")
+                        entryContainer.firstElementChild.style.opacity = "1"
+                    })
+
+                    entryContainer.addEventListener("dragleave", () => {
+                        entryContainer.firstElementChild.classList.remove("AuroraRim-rim")
+                        entryContainer.classList.remove("AuroraRim")
+                        entryContainer.firstElementChild.style.opacity = "0"
+                    })
+
+                    entryContainer.addEventListener("dragover", (e) => {
+                        e.preventDefault();
+                        entryContainer.firstElementChild.classList.add("AuroraRim-rim")
+                        entryContainer.classList.add("AuroraRim")
+                        entryContainer.firstElementChild.style.opacity = "1"
+                        e.dataTransfer.dropEffect = 'move';
+                    });
+
+                    entryContainer.addEventListener("drop", (e) => {
+                        e.preventDefault();
+                        entryContainer.firstElementChild.classList.remove("AuroraRim-rim")
+                        entryContainer.classList.remove("AuroraRim")
+                        entryContainer.firstElementChild.style.opacity = "0"
+                        let data = e.dataTransfer.getData('text/plain')
+                        console.log(data) // TODO: Complete this section once i make an extension for visualizing the path map
+                    })
 
                     let [ instanceContainer, getter ] = visualizeAnInstance("GENERIC MODEL", "SIGMA MODEL", genericEmptyInstancePull("GENERIC MODEL"))
 
