@@ -489,6 +489,8 @@ async function main() {
 
                 window.EXTENSION_RELATED_SNIPPETS[extension].push(snippetContainer.lastElementChild)
 
+                let wasRemoved = false;
+
                 let snapshot = idDupeObs.takeRecords()
                 for (const mutation of snapshot) {
                     if (mutation.addedNodes.length > 0) {
@@ -496,6 +498,7 @@ async function main() {
                             if (node.nodeType === 1) {
                                 let res = checkDupedId(node)
                                 if (res) {
+                                    wasRemoved = true
                                     notify("Cannot create this Element! Id already matches!")
                                     node.remove()
                                 }
@@ -504,9 +507,11 @@ async function main() {
                     }
                 }
 
-                window.EXTENSION_SNIPPET_STARTUP_MUTATION_CALLBACKS.forEach(
-                    (fn) => fn(snapshot)
-                )
+                if (!wasRemoved) {
+                    window.EXTENSION_SNIPPET_STARTUP_MUTATION_CALLBACKS.forEach(
+                        (fn) => fn(snapshot)
+                    )
+                }
 
                 if (needEditSwitch) {
                     window.switch_editing()

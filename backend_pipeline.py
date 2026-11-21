@@ -1,9 +1,22 @@
+import os
+import threading
+import warnings
+
+import tqdm
+import winotify
+
+os.environ["HF_HUB_DISABLE_PROGRESS_BARS"] = "1"
+os.environ["DISABLE_TQDM"] = "1"
+os.environ["HF_HUB_DISABLE_TELEMETRY"] = "1"
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+warnings.filterwarnings("ignore")
+
 import asyncio
 import copy
 import datetime
 import json
 import math
-import os
 import pathlib
 import shutil
 import sys
@@ -19,6 +32,11 @@ import tempfile
 import torch
 import hashlib
 import datetime
+import shutil
+from tkinter import filedialog
+import tkinter as tk
+import traceback
+import functools
 
 
 
@@ -198,7 +216,6 @@ def generate_instance(
 
     return new_key
 
-
 hf_api = huggingface_hub.HfApi()
 
 backed_up_path = pathlib.Path("./backed_up").absolute()
@@ -206,6 +223,11 @@ backed_up_path = pathlib.Path("./backed_up").absolute()
 settings: dict = load_settings()
 
 path_map: dict = get_path_map()
+
+download_traces = {}
+_file_progress: dict[str, tuple[int, int]] = {}
+_lock = threading.Lock()
+_SIGNIFICANT_BYTES = 1_000
 
 model_instance_vault = {}
 loaded_models_vault = {}
@@ -223,6 +245,20 @@ if not audit_layouts(): shutil.rmtree(
 
 
 
+def get_path_map(): return path_map
+
+def write_path_map(model_name, path):
+    path_map[model_name] = path
+
+    with open(backed_up_path / "essential" / "path_map.json", "w") as file:
+        json.dump(path_map, file, indent=4)
+
+    return path_map
+
+def preserve_path_map():
+    with open(backed_up_path / "essential" / "path_map.json", "w") as file:
+        json.dump(path_map, file, indent=4)
+
 def get_model_download_size(id):
     repo_info = hf_api.model_info(repo_id=id, files_metadata=True)
 
@@ -232,6 +268,16 @@ def get_model_download_size(id):
             total_bytes += sibling.size or 0
 
     return list(map(lambda i: ord(i), parse_size(total_bytes*8)))
+
+def get_true_model_size(id):
+    repo_info = hf_api.model_info(repo_id=id, files_metadata=True)
+
+    total_bytes = 0
+    for sibling in repo_info.siblings:
+        if any(sibling.rfilename.endswith(ext) for ext in ['.safetensors', '.bin', '.pt', '.pth', '.gguf']):
+            total_bytes += sibling.size or 0
+
+    return total_bytes*8
 
 def search(query: str, limit=-1) -> Iterable[huggingface_hub.ModelInfo]:
     results = hf_api.list_models(
@@ -256,7 +302,7 @@ def iterate_for(item: Iterable, amount: int = 1):
     return result
 
 def parse_size(item: int | float):
-    if item == 0: return item+" Bits"
+    if item == 0: return str(item)+" Bits"
     namings = list("kmgtpezy".upper())
     byte_size = item/8
     if byte_size.is_integer(): byte_size = round(byte_size)
@@ -348,6 +394,8 @@ def get_files(dir: str):
         }
     return comp
 
+def download_status_snapshot(): return download_traces
+
 def main():
 
     for line in sys.stdin:
@@ -369,9 +417,6 @@ def main():
                 flush=True,
             )
 
-
-if __name__ == "__main__":
-    main()
 
 
 class MessageFields:
@@ -541,7 +586,10 @@ class LoadedModelChat:
         response = self.tokenizer.decode(response_tokens, skip_special_tokens=True)
         extras=""
         if self.enable_thinking and not self.can_think:
-            extras=think_generated_text[think_generated_text.rfind("<think>"):think_generated_text.rfind("</think>")+8]+"\n"
+            extras=(
+                think_generated_text[think_generated_text.rfind("<think>"):]+"</think>" if "</think>" not in think_generated_text else \
+                think_generated_text[think_generated_text.rfind("<think>"):(think_generated_text.rfind("</think>")+8)])+\
+                "\n"
 
         self.messages.append(
             MessageFields().generic_assistant_answer_response(
@@ -591,6 +639,46 @@ class ThinkingType:
     HIGH = 3
     MAX = 4
 
+class CustomTqdmCapturer(tqdm.tqdm):
+    def __init__(self, *args, modelName, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.modelname = modelName
+
+    def display(self, msg=None, pos=None):
+        pass
+
+    def is_significant(self):
+        return _SIGNIFICANT_BYTES <= self.total*8 and bool(self.total)
+
+    def _publish(self):
+        if not self.is_significant(): return
+        with _lock:
+            done = sum(list(n)[0] for n in _file_progress.values())
+            total = sum(list(t)[1] for t in _file_progress.values())
+            percent = (done / total * 100.0) if total else 0.0
+            download_traces[self.modelname] = percent
+
+    def update(self, n=1):
+        super().update(n)
+        if self.total:
+            with _lock:
+                _file_progress[self.desc] = (self.n, self.total, n)
+            self._publish()
+
+    def close(self):
+        if self.total:
+            with _lock:
+                _file_progress[self.desc] = (self.total, self.total, 0)
+        super().close()
+        self._publish()
+
+    def __bool__(self):
+        return True
+
+    def __call__(self, *args, **kwargs):
+        super().__init__(*args,**kwargs)
+        return self
+
 
 
 def has_inference(id):
@@ -624,9 +712,18 @@ def create_inference_chat(model_id, context=None, token_limits=100):
     return new_chat
 
 def download_hf_model(model_id, path):
+    with _lock:
+        _file_progress.clear()
+        download_traces[model_id] = 0.0
+
     huggingface_hub.snapshot_download(
-        repo_id=model_id, local_dir=path
+        repo_id=model_id,
+        local_dir=path,
+        tqdm_class=functools.partial(CustomTqdmCapturer, modelName=model_id),
     )
+
+    with _lock:
+        download_traces[model_id] = 99.99
 
     loaded = load_downloaded_model(path)
     if not loaded.model.can_generate():
@@ -634,6 +731,9 @@ def download_hf_model(model_id, path):
         transformers.AutoModelForCausalLM.from_pretrained(
             model_id, cache_dir=path
         )
+
+    with _lock:
+        download_traces[model_id] = 100.00
 
 def load_downloaded_model(model_path):
     model_path = pathlib.Path(model_path)
@@ -736,11 +836,54 @@ def prepare_chat_with_downloaded_model(
 
     return model
 
+def download_process(model_name, path):
+    download_hf_model(model_name, path)
+    winotify.Notification(
+        app_id="LLM Forge",
+        title=f"Downloading {model_name} is finished!",
+        msg=f'The downloading process of "{model_name}" into "{path}" has been finished',
+        duration="long"
+    ).show()
+
+def JS_download_implementation(model_name, sizing):
+    root = tk.Tk()
+    root.withdraw()
+    root.attributes("-topmost", True)
+    path = filedialog.askdirectory(
+        parent=root,
+        title=f"Directory for {model_name} with at least {parse_size(sizing)} of space"
+    )
+    root.destroy()
+    if path:
+        path = pathlib.Path(path)
+        root_path = path.parts[0]
+        total,taken,free = shutil.disk_usage(root_path)
+        if sizing > free:
+            return [False, 1, parse_size(free).removeprefix("≈ ")]
+
+        try:
+            threading.Thread(target=download_process, args=(model_name, path,), daemon=True).start()
+        except Exception as err: return [False, 2, traceback.format_exc()]
+
+        return [True, 0, str(path.absolute()).replace("\\", "/")]
+
+    else: return [False, 0, 0]
+
+
+
+if __name__ == "__main__":
+    main()
+
+
+
+# JS_download_implementation("Qwen/Qwen2.5-0.5B-Instruct", 0)
+#
+# input()
 
 # model_id = "Qwen/Qwen2.5-0.5B-Instruct"
 # # # model_id = "deepseek-ai/DeepSeek-OCR-2"
 # model = prepare_chat_with_downloaded_model(
-#     "./backed_up/essential/models/qwen",
+#     load_downloaded_model("./backed_up/essential/models/test"),
 #     temperature=0.3,
 #     deep_thinking=True,
 #     thinking_type=ThinkingType.MAX,

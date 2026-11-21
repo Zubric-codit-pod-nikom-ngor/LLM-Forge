@@ -1263,7 +1263,8 @@ window.EXTENSION_SNIPPET_STARTUP_MUTATION_CALLBACKS.push(
         for (let mutation of mutations) {
             if (mutation.addedNodes.length === 0) return
             mutation.addedNodes.forEach(node => {
-                if (!(node.nodeType === 1)) return
+                if (!(node.nodeType === 1)) return;
+                if (!(node)) return;
                 if (node.getAttribute("itemext") === "core-modelSearch") {
                     node.children[0].children[0].children[0].addEventListener("keydown", (e) => {
                         if (e.key === "Enter") {
@@ -1570,10 +1571,221 @@ window.EXTENSION_SNIPPET_STARTUP_MUTATION_CALLBACKS.push(
 
                     mainContainer.appendChild(instanceContainer)
                 }
+                if (node.getAttribute("itemext") === "core-localModelList") {
+                    let mainContainer = document.getElementById("core-localModelList-mainContainer");
+                    let entryContainer = document.getElementById("core-localModelList-entry");
+                    let inProcessContainer = document.getElementById("core-localModelList-inProcess");
+
+                    entryContainer.addEventListener("dragenter", () => {
+                        entryContainer.firstElementChild.classList.add("AuroraRim-rim")
+                        entryContainer.classList.add("AuroraRim")
+                        entryContainer.firstElementChild.style.opacity = "1"
+                    })
+
+                    entryContainer.addEventListener("dragleave", () => {
+                        entryContainer.firstElementChild.classList.remove("AuroraRim-rim")
+                        entryContainer.classList.remove("AuroraRim")
+                        entryContainer.firstElementChild.style.opacity = "0"
+                    })
+
+                    entryContainer.addEventListener("dragover", (e) => {
+                        e.preventDefault();
+                        entryContainer.firstElementChild.classList.add("AuroraRim-rim")
+                        entryContainer.classList.add("AuroraRim")
+                        entryContainer.firstElementChild.style.opacity = "1"
+                        e.dataTransfer.dropEffect = 'move';
+                    });
+
+                    entryContainer.addEventListener("drop", async (e) => {
+                        e.preventDefault();
+                        entryContainer.firstElementChild.classList.remove("AuroraRim-rim")
+                        entryContainer.classList.remove("AuroraRim")
+                        entryContainer.firstElementChild.style.opacity = "0"
+                        let model = e.dataTransfer.getData('text/plain')
+
+                        let modelSize = await window.pythonPipelineAPI.interactWithPythonPipeline(
+                            {
+                                "object": "get_true_model_size",
+                                "args": [model], "kwargs": {},
+                            }
+                        )
+
+                        let modelSizeString = ""
+                        for (let char of await window.pythonPipelineAPI.interactWithPythonPipeline(
+                            {
+                                "object": "get_model_download_size",
+                                "args": [model], "kwargs": {},
+                            }
+                        )) {
+                            modelSizeString += String.fromCodePoint(char)
+                        };
+
+                        let status = await window.pythonPipelineAPI.interactWithPythonPipeline({
+                            "object": "JS_download_implementation",
+                            "args": [model, modelSize],
+                            "kwargs": {}
+                        });
+
+                        if (status[0] == true) {
+                            window.notify('Downlading "'+model+'", you will get a notification once it is finished! Do not close the app!');
+
+                            (async () => {
+                                let newWrapper = document.createElement("div")
+                                newWrapper.classList.add("SearchTile")
+                                newWrapper.classList.add("PosVertically")
+                                newWrapper.style.alignItems = "left"
+                                newWrapper.style.flexDirection = "column"
+                                newWrapper.style.width = "100%"
+                                newWrapper.style.height = "fit-content"
+                                newWrapper.style.padding = "7px"
+                                newWrapper.style.marginBottom = "10px"
+
+                                let modelNameLabel = document.createElement("div")
+                                modelNameLabel.style.color = "white"
+                                modelNameLabel.style.fontSize = "14px"
+                                modelNameLabel.style.fontWeight = "bold"
+                                modelNameLabel.classList.add("SenFont")
+                                modelNameLabel.textContent = model
+                                modelNameLabel.style.whiteSpace = "nowrap"
+                                modelNameLabel.draggable = "false"
+
+                                let secondaryLabel = document.createElement("div")
+                                secondaryLabel.style.color = "#515151"
+                                secondaryLabel.style.fontSize = "11px"
+                                secondaryLabel.classList.add("JetBrainsFont")
+                                secondaryLabel.textContent = "Downloading "+modelSizeString+" | 0.00%"
+                                secondaryLabel.draggable = "false"
+
+                                let progressBar = document.createElement("div")
+                                progressBar.style.width = "100%"
+                                progressBar.style.height = "5px"
+                                progressBar.style.borderRadius = "2.5px"
+                                progressBar.style.backgroundColor = "#1e1e1e"
+                                progressBar.style.marginTop = "5px"
+                                progressBar.style.transition = "all 0.075s ease"
+
+                                newWrapper.appendChild(modelNameLabel)
+                                newWrapper.appendChild(secondaryLabel)
+                                newWrapper.appendChild(progressBar)
+                                mainContainer.appendChild(newWrapper)
+
+                                while (true) {
+                                    await window.sleep(150);
+                                    let res = await window.pythonPipelineAPI.interactWithPythonPipeline({
+                                        "object": "download_status_snapshot", "args":[], "kwargs": {}
+                                    })
+                                    if (!Object.keys(res).includes(model)) continue
+                                    console.log(res)
+                                    progressBar.style.background = "linear-gradient(to right, #ff4400, #ff9900 "+res[model].toFixed(3)+"%, #1e1e1e "+res[model].toFixed(3)+"%, #1e1e1e)"
+                                    secondaryLabel.textContent = "Downloading "+modelSizeString+" | "+res[model].toFixed(2)+"%"
+                                    if (Math.floor(res[model]) >= 99.99) {
+                                        break
+                                    }
+                                }
+
+                                secondaryLabel.textContent = "Download Finished, auditing..."
+                                progressBar.style.background = "linear-gradient(to right, #ff4400, #ff9900 calc(100% - 4px), #1e1e1e calc(100% - 4px), #1e1e1e)"
+
+                                while (true) {
+                                    await window.sleep(150);
+                                    let res = await window.pythonPipelineAPI.interactWithPythonPipeline({
+                                        "object": "download_status_snapshot", "args":[], "kwargs": {}
+                                    })
+                                    if (!Object.keys(res).includes(model)) continue
+                                    if (Math.floor(res[model]) > 99.99) {
+                                        break
+                                    }
+                                }
+
+                                secondaryLabel.textContent = "Model is ready to be used!"
+                                progressBar.style.background = "linear-gradient(to right, #ff4400, #ff9900)"
+
+                                await window.pythonPipelineAPI.interactWithPythonPipeline({
+                                    "object": "write_path_map", "args":[model, status[2]], "kwargs": {}
+                                })
+
+                                inProcessContainer.removeChild(newWrapper)
+                                newWrapper.remove()
+                            })();
+
+                        } else if (status[0] == false) {
+                            if (status[1] == 0) {
+                                window.notify("You have passed an invalid path! No download was started!")
+                            } else if (status[1] == 1) {
+                                window.notify("You have no space on your drive! (needed: "+modelSizeString+", you have: "+status[2]+")")
+                            } else if (status[1] == 2) {
+                                window.notify('Oops! We have encountered some error when downloading "'+model+'"!')
+                                console.log(status[2])
+                            }
+                        }
+                    })
+
+                    let past_path_map = {};
+
+                    (async () => {
+                        while (document.contains(mainContainer)) {
+                            let newPathMap = await window.pythonPipelineAPI.interactWithPythonPipeline(
+                                {
+                                    "object": "get_path_map",
+                                    "args": [],
+                                    "kwargs": {}
+                                }
+                            )
+
+                            if (Object.keys(newPathMap).toString() == Object.keys(past_path_map).toString()) {
+                                await window.sleep(3000);
+                                continue
+                            }
+
+                            past_path_map = newPathMap;
+
+                            mainContainer.innerHTML = "";
+                            Object.keys(newPathMap).forEach((key) => {
+                                let newWrapper = document.createElement("div")
+                                newWrapper.classList.add("SearchTile")
+                                newWrapper.classList.add("PosVertically")
+                                newWrapper.style.alignItems = "left"
+                                newWrapper.style.flexDirection = "column"
+                                newWrapper.style.width = "100%"
+                                newWrapper.style.height = "fit-content"
+                                newWrapper.style.padding = "7px"
+                                newWrapper.style.marginBottom = "10px"
+                                newWrapper.style.cursor = "grab"
+                                newWrapper.draggable = "true"
+
+                                let modelNameLabel = document.createElement("div")
+                                modelNameLabel.style.color = "white"
+                                modelNameLabel.style.fontSize = "14px"
+                                modelNameLabel.style.fontWeight = "bold"
+                                modelNameLabel.classList.add("SenFont")
+                                modelNameLabel.textContent = key
+                                modelNameLabel.style.whiteSpace = "nowrap"
+                                modelNameLabel.draggable = "false"
+
+                                let pathLabel = document.createElement("div")
+                                pathLabel.style.color = "#515151"
+                                pathLabel.style.fontSize = "11px"
+                                pathLabel.classList.add("JetBrainsFont")
+                                pathLabel.textContent = past_path_map[key]
+                                pathLabel.draggable = "false"
+
+                                newWrapper.addEventListener("dragstart", (e) => {
+                                    e.dataTransfer.setData("text/plain", past_path_map[key]);
+                                });
+
+                                newWrapper.appendChild(modelNameLabel)
+                                newWrapper.appendChild(pathLabel)
+                                mainContainer.appendChild(newWrapper)
+                            })
+                        }
+                    })();
+                }
             })
         }
     }
 )
+
+// TODO: Implement unload callbacks for modelManager, chatWindow-block and localModelList
 
 window.EXTENSION_SNIPPET_UNLOAD_MUTATION_CALLBACKS.push((item) => {
     if (item.getAttribute("itemext") === 'core-modelSearch') {

@@ -63,6 +63,11 @@ async function createWindow() {
             "args": [],
             "kwargs": {}
         });
+        await pipeline.interactWithPythonPipeline({
+            "object": "preserve_path_map",
+            "args": [],
+            "kwargs": {}
+        });
         pipeline.wipePythonPipeline();
         console.log(width, height, isMaximized);
 

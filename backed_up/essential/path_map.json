@@ -1,1 +1,4 @@
-{}
+{
+    "Qwen/Qwen2.5-0.5B-Instruct": "D:/webstorm_projects/LLM Forge/backed_up/essential/models/qwen",
+    "codeparrot/codeparrot-small": "D:/webstorm_projects/LLM Forge/backed_up/essential/models/test"
+}
